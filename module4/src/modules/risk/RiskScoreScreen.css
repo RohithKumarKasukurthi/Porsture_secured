@@ -1,0 +1,190 @@
+/* ===== GLOBAL CONTAINER ===== */
+.risk-score-container {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #1b2a4a, #050b18);
+    padding: 40px;
+    color: #fff;
+  }
+  
+  /* ===== CARD ===== */
+  .risk-score-card {
+    background: rgba(15, 25, 45, 0.85) !important;
+    backdrop-filter: blur(18px);
+    border-radius: 20px !important;
+    box-shadow: 0 0 40px rgba(0, 170, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  /* ===== HEADER ===== */
+  .risk-score-title {
+    text-align: center;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+    margin-bottom: 24px !important;
+  }
+  
+  /* ===== MAIN LAYOUT ===== */
+  .risk-score-main-layout {
+    display: flex;
+    gap: 32px;
+    margin-top: 20px;
+  }
+  
+  /* ===== LEFT PANEL ===== */
+  .risk-score-left-panel {
+    flex: 1;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+  }
+  
+  /* ===== RIGHT PANEL ===== */
+  .risk-score-right-panel {
+    width: 320px;
+    padding: 28px;
+    background: radial-gradient(circle, #132c4d, #0b162b);
+    border-radius: 18px;
+    text-align: center;
+    box-shadow: inset 0 0 25px rgba(0, 160, 255, 0.25);
+  }
+  
+  /* ===== SCORE ===== */
+  .risk-score-display {
+    font-size: 64px !important;
+    font-weight: 700 !important;
+    margin-bottom: 10px !important;
+  }
+  
+  /* ===== BADGE ===== */
+  .risk-score-badge {
+    padding: 6px 18px !important;
+    font-size: 14px !important;
+  }
+  
+  .risk-score-badge.medium {
+    background: linear-gradient(135deg, #ffb347, #ff8c00) !important;
+    color: #000 !important;
+  }
+  
+  .risk-score-badge.high {
+    background: linear-gradient(135deg, #ff4b2b, #ff0000) !important;
+  }
+  
+  .risk-score-badge.low {
+    background: linear-gradient(135deg, #00c853, #009624) !important;
+  }
+  
+  /* ===== BUTTONS ===== */
+  .risk-score-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 18px;
+  }
+  
+  .risk-score-button-primary {
+    background: linear-gradient(135deg, #1e88e5, #42a5f5) !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+  }
+  
+  .risk-score-button-secondary {
+    border: 1px solid #42a5f5 !important;
+    color: #90caf9 !important;
+    border-radius: 10px !important;
+  }
+  
+  /* ===== LOWER SECTION ===== */
+  .risk-score-lower-layout {
+    display: flex;
+    gap: 32px;
+    margin-top: 40px;
+  }
+  
+  /* ===== HISTORY ===== */
+  .risk-score-history-section {
+    flex: 1;
+  }
+  
+  .risk-score-history-title {
+    font-weight: 600 !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .risk-score-download-button {
+    color: #90caf9 !important;
+  }
+  
+  /* ===== TABLE ===== */
+  .MuiTable-root {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .MuiTableCell-root {
+    color: #e0e0e0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  /* ===== CHART ===== */
+  .risk-score-chart-section {
+    width: 360px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  
+  .risk-score-chart-title {
+    text-align: center;
+    margin-bottom: 10px !important;
+  }
+  /* ===== PORTSURE HEADER ===== */
+.portsure-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    background: linear-gradient(180deg, #0b162b, #0e1f3d);
+    border-radius: 14px;
+    margin-bottom: 24px;
+    box-shadow: inset 0 0 20px rgba(0, 160, 255, 0.2);
+  }
+  
+  .portsure-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #90caf9;
+  }
+  
+  .portsure-icon {
+    background: linear-gradient(135deg, #1e88e5, #42a5f5);
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: #fff;
+  }
+  
+  .portsure-nav {
+    display: flex;
+    gap: 22px;
+    font-size: 14px;
+    color: #b0bec5;
+  }
+  
+  .portsure-nav span {
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  
+  .portsure-nav span:hover {
+    color: #90caf9;
+  }
+  
+  .portsure-nav .active {
+    color: #42a5f5;
+    font-weight: 600;
+  }
+  

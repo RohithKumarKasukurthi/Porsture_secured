@@ -1,0 +1,147 @@
+/* =========================================================
+   GLOBAL CONTAINER
+========================================================= */
+.exposure-alerts-container {
+    min-height: 100vh;
+    padding: 40px;
+    background: radial-gradient(circle at top, #1b2a4a, #050b18);
+    color: #ffffff;
+  }
+  
+  /* =========================================================
+     MAIN CARD
+  ========================================================= */
+  .exposure-alerts-card {
+    background: rgba(15, 25, 45, 0.88) !important;
+    backdrop-filter: blur(18px);
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 45px rgba(255, 80, 80, 0.25);
+  }
+  
+  /* =========================================================
+     HEADER TITLE
+  ========================================================= */
+  .exposure-alerts-title {
+    text-align: center;
+    font-weight: 600 !important;
+    letter-spacing: 0.4px;
+    margin-bottom: 18px !important;
+    color: #e3f2fd;
+  }
+  
+  /* =========================================================
+     ACTIVE ALERT (FIXED WHITE SCREEN ISSUE)
+  ========================================================= */
+  .exposure-alerts-alert {
+    background: linear-gradient(135deg, #4a0f0f, #7f1d1d) !important;
+    color: #ffecec !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(255, 100, 100, 0.6);
+    box-shadow: inset 0 0 14px rgba(255, 80, 80, 0.4);
+  }
+  
+  .exposure-alerts-alert .MuiAlert-icon {
+    color: #ff8a80 !important;
+  }
+  
+  /* =========================================================
+     SECTION HEADERS
+  ========================================================= */
+  .exposure-alerts-section {
+    margin-top: 32px;
+  }
+  
+  .exposure-alerts-section-title {
+    font-weight: 600 !important;
+    color: #90caf9;
+    margin-bottom: 10px !important;
+  }
+  
+  /* =========================================================
+     TABLE STYLING
+  ========================================================= */
+  .MuiTable-root {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .MuiTableHead-root {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .MuiTableCell-root {
+    color: #e0e0e0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 14px;
+  }
+  
+  /* Remove default MUI white background */
+  .MuiTableRow-root {
+    background-color: transparent !important;
+  }
+  
+  .MuiTableRow-root td {
+    background-color: transparent !important;
+  }
+  
+  /* =========================================================
+     BREACH VALUE
+  ========================================================= */
+  .exposure-value-breached {
+    color: #ff6f6f;
+    font-weight: 700;
+  }
+  
+  /* =========================================================
+     STATUS BADGES
+  ========================================================= */
+  .exposure-alerts-status-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+    letter-spacing: 0.4px;
+  }
+  
+  .exposure-alerts-status-badge.ok {
+    background: linear-gradient(135deg, #00c853, #009624);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 200, 83, 0.4);
+  }
+  
+  .exposure-alerts-status-badge.breach {
+    background: linear-gradient(135deg, #ff5252, #d50000);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 82, 82, 0.5);
+  }
+  
+  /* =========================================================
+     DOWNLOAD BUTTON
+  ========================================================= */
+  .exposure-alerts-download-button {
+    background: linear-gradient(135deg, #ff9800, #ffb74d) !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    padding: 8px 18px !important;
+    text-transform: none !important;
+    box-shadow: 0 0 18px rgba(255, 152, 0, 0.45);
+  }
+  
+  .exposure-alerts-download-button:hover {
+    background: linear-gradient(135deg, #ffa726, #ffd180) !important;
+  }
+  
+  /* =========================================================
+     EMPTY STATE
+  ========================================================= */
+  .MuiTableCell-root[colspan="3"] {
+    text-align: center;
+    color: #90a4ae !important;
+    font-style: italic;
+  }
+  
