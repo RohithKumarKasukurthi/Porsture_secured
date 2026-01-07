@@ -7,7 +7,6 @@ import {
   MenuItem,
   Button,
   Chip,
-  Divider,
   Table,
   TableHead,
   TableRow,
@@ -15,13 +14,24 @@ import {
   TableBody,
 } from "@mui/material";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useRisk } from "./RiskProvider";
 import { calculateRiskScore, getRiskLevel, getExposureData } from "./riskUtils";
 import { downloadCSV } from "./reportUtils";
 import "./RiskScoreScreen.css";
 
-const COLORS = ["#1976d2", "#26a69a", "#ef5350"];
+const COLORS = ["#3b82f6", "#10b981", "#f59e0b"];
+
+// Style object for Dark Theme Inputs
+const darkInputStyle = {
+    background: '#1e293b', 
+    borderRadius: 1,
+    "& .MuiInputBase-input": { color: "white" },
+    "& .MuiInputLabel-root": { color: "#94a3b8" }, // Label Color
+    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#334155" }, // Border Color
+    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#3b82f6" },
+    "& .MuiSelect-icon": { color: "white" }
+};
 
 export default function RiskScoreScreen() {
   const navigate = useNavigate();
@@ -68,177 +78,192 @@ export default function RiskScoreScreen() {
       {/* ===== HEADER BAR ===== */}
       <div className="portsure-header">
         <div className="portsure-logo">
-          <span className="portsure-icon">▦</span>
+          <span className="portsure-icon">📊</span>
           <span className="portsure-text">PortSure</span>
         </div>
 
         <div className="portsure-nav">
-          <span>Home</span>
+          <Link to="/asset-manager" style={{textDecoration:'none', color:'inherit'}}>Home</Link>
           <span>Asset Allocation</span>
           <span>Trade Status</span>
           <span>Portfolio Diversification</span>
           <span className="active">Risk Dashboard</span>
+          <Link to="/" style={{textDecoration:'none', color:'inherit'}}>Logout</Link>
         </div>
       </div>
 
-      <Card className="risk-score-card">
-        <CardContent>
-          {/* ===== HEADER ===== */}
-          <Typography variant="h6" className="risk-score-title">
-            Risk Score Dashboard
-          </Typography>
+      {/* ===== MAIN LAYOUT: LEFT PANEL (INPUTS) & RIGHT PANEL (SCORE) ===== */}
+      <div className="risk-score-main-layout">
+        
+        {/* LEFT PANEL */}
+        <Card className="risk-score-card risk-score-left-panel">
+            <CardContent>
+                <Typography variant="h6" className="risk-score-title">
+                    Risk Score Calculator
+                </Typography>
+                
+                {/* PORTFOLIO SELECTOR */}
+                <TextField
+                  select
+                  label="Select Portfolio ID"
+                  value={selectedPortfolio}
+                  onChange={(e) => setSelectedPortfolio(e.target.value)}
+                  fullWidth
+                  sx={{ mt: 2, ...darkInputStyle }}
+                >
+                  {Object.keys(portfolios).map((pid) => (
+                    <MenuItem key={pid} value={pid}>
+                      {pid}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-          {/* ===== MAIN LAYOUT: LEFT PANEL (INPUTS) & RIGHT PANEL (SCORE) ===== */}
-          <div className="risk-score-main-layout">
-            {/* LEFT PANEL */}
-            <div className="risk-score-left-panel">
-              {/* PORTFOLIO SELECTOR */}
-              <TextField
-                select
-                label="Select Portfolio ID"
-                value={selectedPortfolio}
-                onChange={(e) => setSelectedPortfolio(e.target.value)}
-                sx={{ mt: 2, minWidth: 240 }}
-              >
-                {Object.keys(portfolios).map((pid) => (
-                  <MenuItem key={pid} value={pid}>
-                    {pid}
-                  </MenuItem>
-                ))}
-              </TextField>
+                {/* ASSET ALLOCATION */}
+                <Grid container spacing={2} sx={{ mt: 2 }}>
+                  {Object.keys(allocation).map((asset) => (
+                    <Grid item xs={12} key={asset}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label={`${asset} Quantity`}
+                        value={allocation[asset]}
+                        onChange={(e) => updateAllocation(asset, e.target.value)}
+                        sx={darkInputStyle}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+            </CardContent>
+        </Card>
 
-              {/* ASSET ALLOCATION */}
-              <Grid container spacing={2} sx={{ mt: 2 }}>
-                {Object.keys(allocation).map((asset) => (
-                  <Grid item xs={12} key={asset}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label={`${asset} Quantity`}
-                      value={allocation[asset]}
-                      onChange={(e) => updateAllocation(asset, e.target.value)}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </div>
-
-            {/* RIGHT PANEL */}
-            <div className="risk-score-right-panel">
+        {/* RIGHT PANEL */}
+        <Card className="risk-score-card risk-score-right-panel">
+           <CardContent style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%'}}>
+              <Typography variant="h6" style={{ color:'#fff', marginBottom:'20px'}}>Current Risk Analysis</Typography>
+              
               {/* RISK SCORE */}
               <Typography variant="h2" className="risk-score-display">
                 {score}
               </Typography>
+              
               <Chip
                 label={`${level.label} Risk`}
-                color={level.color}
                 className={`risk-score-badge ${badgeClass}`}
-                sx={{ mb: 2 }}
+                sx={{ mb: 4 }}
               />
 
               {/* ACTION BUTTONS */}
-              <div className="risk-score-buttons">
+              <div className="risk-score-buttons" style={{ width: '100%' }}>
                 <Button
-                  variant="contained"
                   className="risk-score-button-primary"
                   onClick={calculateRisk}
+                  fullWidth
                 >
                   Calculate Present Risk
                 </Button>
 
                 <Button
-                  variant="outlined"
                   className="risk-score-button-secondary"
                   onClick={() => navigate("/exposure-alerts")}
+                  fullWidth
                 >
                   View Exposure & Alerts
                 </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+        </Card>
+      </div>
 
-          {/* ===== LOWER LAYOUT: HISTORY TABLE & CHART ===== */}
-          <div className="risk-score-lower-layout">
-            {/* RISK SCORE HISTORY */}
-            <div className="risk-score-history-section">
-              <Typography
-                variant="subtitle1"
-                className="risk-score-history-title"
-              >
-                Risk Score History
-              </Typography>
+      {/* ===== LOWER LAYOUT: HISTORY TABLE & CHART ===== */}
+      <div className="risk-score-lower-layout">
+        
+        {/* RISK SCORE HISTORY */}
+        <Card className="risk-score-card risk-score-history-section">
+            <CardContent>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
+                    <Typography
+                      variant="subtitle1"
+                      className="risk-score-history-title"
+                    >
+                      Risk Score History
+                    </Typography>
 
-              <Button
-                className="risk-score-download-button"
-                sx={{ mb: 1 }}
-                onClick={downloadReport}
-              >
-                Download Risk Score Report (CSV)
-              </Button>
+                    <Button
+                      className="risk-score-download-button"
+                      onClick={downloadReport}
+                    >
+                      Download CSV
+                    </Button>
+                </div>
 
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Risk ID</TableCell>
-                    <TableCell>Score</TableCell>
-                    <TableCell>Evaluation Date</TableCell>
-                  </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  {calculationHistory.length === 0 ? (
+                <Table>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={3}>
-                        No risk calculations yet
-                      </TableCell>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Risk ID</TableCell>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Score</TableCell>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Evaluation Date</TableCell>
                     </TableRow>
-                  ) : (
-                    calculationHistory.map((r) => (
-                      <TableRow key={r.riskId}>
-                        <TableCell>{r.riskId}</TableCell>
-                        <TableCell>{r.scoreValue}</TableCell>
-                        <TableCell>
-                          {r.evaluationDate.toLocaleDateString()}
+                  </TableHead>
+
+                  <TableBody>
+                    {calculationHistory.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} sx={{ color: '#94a3b8', textAlign:'center', fontStyle:'italic' }}>
+                            No risk calculations yet
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ) : (
+                      calculationHistory.map((r) => (
+                        <TableRow key={r.riskId}>
+                          <TableCell sx={{ color: 'white' }}>{r.riskId}</TableCell>
+                          <TableCell sx={{ color: 'white', fontWeight:'bold' }}>{r.scoreValue}</TableCell>
+                          <TableCell sx={{ color: 'white' }}>
+                            {r.evaluationDate.toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
 
-            {/* PORTFOLIO DIVERSIFICATION CHART */}
-            <div className="risk-score-chart-section">
-              <Typography
-                variant="subtitle1"
-                className="risk-score-chart-title"
-              >
-                Asset Allocation
-              </Typography>
+        {/* PORTFOLIO DIVERSIFICATION CHART */}
+        <Card className="risk-score-card risk-score-chart-section">
+            <CardContent>
+                <Typography
+                  variant="subtitle1"
+                  className="risk-score-chart-title"
+                >
+                  Asset Allocation
+                </Typography>
 
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    label={(entry) => `${entry.value}%`}
-                  >
-                    {pieData.map((_, index) => (
-                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => `${v}%`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      stroke="none"
+                      label={(entry) => `${entry.value}%`}
+                    >
+                      {pieData.map((_, index) => (
+                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                        formatter={(v) => `${v}%`} 
+                        contentStyle={{ backgroundColor: '#1e293b', border:'none', color:'white' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

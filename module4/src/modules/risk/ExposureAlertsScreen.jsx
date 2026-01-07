@@ -10,6 +10,7 @@ import {
   TableBody,
   Button,
 } from "@mui/material";
+import { Link } from "react-router-dom";
 import { useRisk } from "./RiskProvider";
 import { getExposureData } from "./riskUtils";
 import { downloadCSV } from "./reportUtils";
@@ -43,18 +44,49 @@ export default function ExposureAlertsScreen() {
 
   return (
     <div className="exposure-alerts-container">
-      <Card className="exposure-alerts-card">
+      
+      {/* ===== ADDED HEADER BAR ===== */}
+      <div className="portsure-header">
+        <div className="portsure-logo">
+          <span className="portsure-icon">📊</span>
+          <span className="portsure-text">PortSure</span>
+        </div>
+
+        <div className="portsure-nav">
+          <Link to="/asset-manager">Home</Link>
+          <span>Asset Allocation</span>
+          <span>Trade Status</span>
+          <span>Portfolio Diversification</span>
+          <span className="active">Risk Dashboard</span>
+          <Link to="/">LogOut</Link>
+        </div>
+      </div>
+
+      {/* Back Link */}
+      <div style={{ marginBottom: '20px' }}>
+         <Link to="/risk-dashboard" style={{ textDecoration: 'none', color: '#3b82f6', fontWeight: 'bold' }}>
+            ← Back to Dashboard
+         </Link>
+      </div>
+
+      <Card className="exposure-alerts-card" sx={{ bgcolor: '#0f172a', color: 'white', borderRadius: 4 }}>
         <CardContent>
-          <Typography variant="h6" className="exposure-alerts-title">
+          <Typography variant="h6" className="exposure-alerts-title" sx={{ color: 'white', textAlign: 'center', mb: 3 }}>
             Exposure & Alerts – {selectedPortfolio}
           </Typography>
 
           {/* 🔴 ACTIVE ALERT */}
           {activeBreaches.length > 0 && (
             <Alert
-              severity="warning"
+              severity="error"
               className="exposure-alerts-alert"
-              sx={{ mt: 2 }}
+              sx={{ 
+                mt: 2, 
+                bgcolor: '#7f1d1d', 
+                color: '#fca5a5', 
+                '& .MuiAlert-icon': { color: '#fca5a5' },
+                border: '1px solid #ef4444'
+              }}
             >
               ▲ High Risk Alert Triggered
             </Alert>
@@ -64,7 +96,7 @@ export default function ExposureAlertsScreen() {
           <div className="exposure-alerts-section">
             <Typography
               className="exposure-alerts-section-title"
-              sx={{ mt: 3 }}
+              sx={{ mt: 3, color: '#fff', fontWeight: 'bold' }}
             >
               Exposure Analysis
             </Typography>
@@ -72,10 +104,10 @@ export default function ExposureAlertsScreen() {
             <Table sx={{ mt: 1 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Asset</TableCell>
-                  <TableCell>Exposure (%)</TableCell>
-                  <TableCell>Limit (%)</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Asset</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Exposure (%)</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Limit (%)</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -85,17 +117,22 @@ export default function ExposureAlertsScreen() {
                     <TableRow
                       key={e.name}
                       sx={{
-                        bgcolor: breached ? "#fff3e0" : "inherit",
+                        bgcolor: breached ? "rgba(239, 68, 68, 0.1)" : "transparent",
                       }}
                     >
-                      <TableCell>{e.name}</TableCell>
+                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{e.name}</TableCell>
                       <TableCell
                         className={breached ? "exposure-value-breached" : ""}
+                        sx={{ 
+                            color: breached ? '#ef4444' : '#fff', 
+                            fontWeight: breached ? 'bold' : 'normal',
+                            borderBottom: '1px solid rgba(255,255,255,0.1)'
+                        }}
                       >
                         {e.value}%
                       </TableCell>
-                      <TableCell>{LIMITS[e.name]}%</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{LIMITS[e.name]}%</TableCell>
+                      <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                         <span
                           className={`exposure-alerts-status-badge ${
                             breached ? "breach" : "ok"
@@ -113,41 +150,44 @@ export default function ExposureAlertsScreen() {
 
           {/* 📜 BREACH HISTORY */}
           <div className="exposure-alerts-section">
-            <Typography
-              className="exposure-alerts-section-title"
-              sx={{ mt: 4 }}
-            >
-              Breach History
-            </Typography>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px' }}>
+                <Typography
+                  className="exposure-alerts-section-title"
+                  sx={{ color: '#fff', fontWeight: 'bold' }}
+                >
+                  Breach History
+                </Typography>
 
-            <Button
-              className="exposure-alerts-download-button"
-              sx={{ mt: 1 }}
-              color="warning"
-              onClick={downloadReport}
-            >
-              Download Breach Report
-            </Button>
+                <Button
+                  className="exposure-alerts-download-button"
+                  sx={{ mt: 1, bgcolor: '#f59e0b', color: '#000', '&:hover': { bgcolor: '#d97706' } }}
+                  onClick={downloadReport}
+                >
+                  Download Breach Report
+                </Button>
+            </div>
 
             <Table sx={{ mt: 2 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Risk ID</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Breaches</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Risk ID</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Date</TableCell>
+                  <TableCell sx={{ color: '#94a3b8', fontWeight:'bold' }}>Breaches</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {breaches.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3}>No breaches recorded</TableCell>
+                    <TableCell colSpan={3} sx={{ color: '#64748b', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                        No breaches recorded
+                    </TableCell>
                   </TableRow>
                 ) : (
                   breaches.map((r) => (
                     <TableRow key={r.riskId}>
-                      <TableCell>{r.riskId}</TableCell>
-                      <TableCell>{r.evaluationDate.toLocaleString()}</TableCell>
-                      <TableCell>{r.breaches.join(", ")}</TableCell>
+                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{r.riskId}</TableCell>
+                      <TableCell sx={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{r.evaluationDate.toLocaleString()}</TableCell>
+                      <TableCell sx={{ color: '#fca5a5', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>{r.breaches.join(", ")}</TableCell>
                     </TableRow>
                   ))
                 )}
