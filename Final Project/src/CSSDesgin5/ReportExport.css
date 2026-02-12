@@ -1,0 +1,121 @@
+.report-export-page {
+  background-color: var(--bg-app);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-export-container {
+  max-width: 1000px;
+  margin: var(--space-2xl) auto;
+  padding: 0 var(--space-md);
+  width: 100%;
+}
+
+.export-preview {
+  background: var(--bg-card);
+  padding: var(--space-2xl);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+  border: 1px solid #e2e8f0;
+}
+
+.export-preview h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: var(--space-2xl);
+  text-align: center;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.05em;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-2xl);
+  border: 1px solid #f1f5f9;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.history-table th {
+  background: var(--primary);
+  color: white;
+  text-align: left;
+  padding: var(--space-lg);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.history-table td {
+  padding: var(--space-lg);
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.export-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+
+.export-actions button {
+  padding: 1rem 2rem;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  transition: var(--transition-base);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.pdf1 {
+  background: var(--primary);
+  color: white;
+}
+
+.excel1 {
+  background: #107c10;
+  color: white;
+}
+
+.export-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+  .history-table thead {
+    display: none;
+  }
+
+  .history-table tr {
+    display: block;
+    border: 1px solid #f1f5f9;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  .history-table td {
+    display: flex;
+    justify-content: space-between;
+    border: none;
+    padding: var(--space-xs) 0;
+  }
+
+  .history-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .export-actions {
+    flex-direction: column;
+  }
+}

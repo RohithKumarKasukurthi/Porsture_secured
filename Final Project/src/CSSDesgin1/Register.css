@@ -1,0 +1,148 @@
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: radial-gradient(circle at bottom right, var(--bg-app), var(--bg-surface));
+  position: relative;
+  overflow-x: hidden;
+}
+
+.register-page::after {
+  content: '';
+  position: absolute;
+  bottom: -10%;
+  right: -10%;
+  width: 40%;
+  height: 40%;
+  background: radial-gradient(circle, var(--accent-light) 0%, transparent 70%);
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 500px;
+  padding: var(--space-xl);
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  z-index: 1;
+  animation: fadeIn var(--transition-base);
+}
+
+.register-card h2 {
+  font-size: 1.5rem;
+  color: var(--text-heading);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+  font-weight: 800;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.input-field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.input-field input,
+.role-select {
+  width: 100%;
+  padding: 0.75rem var(--space-md);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  transition: var(--transition-fast);
+  background: var(--bg-app);
+}
+
+.input-field input:focus,
+.role-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--bg-card);
+}
+
+.error-msg {
+  font-size: 0.75rem;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.reg-btn {
+  width: 100%;
+  padding: 0.875rem;
+  margin-top: var(--space-sm);
+  background: var(--primary);
+  color: var(--text-inverse);
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-base);
+}
+
+.reg-btn:hover:not(:disabled) {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.reg-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.login-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.login-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.login-small-btn {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.login-small-btn:hover {
+  text-decoration: underline;
+}
+
+/* Role Select Specifics */
+.role-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.25rem;
+  padding-right: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .register-card {
+    padding: var(--space-lg);
+  }
+}
