@@ -124,6 +124,10 @@
     .diversification-layout {
         grid-template-columns: 1fr;
     }
+    
+    .ps-sidebar {
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -133,6 +137,95 @@
 
     .chart-container {
         min-height: 300px;
+    }
+    
+    .ps-glass-card {
+        padding: var(--space-lg);
+    }
+    
+    .ps-form-content {
+        padding: var(--space-lg);
+    }
+    
+    .ps-form-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .ps-form-header p {
+        font-size: 0.875rem;
+    }
+    
+    .ps-tag {
+        font-size: 0.75rem;
+        width: auto;
+    }
+    
+    .card-header h3 {
+        font-size: 1.25rem;
+    }
+    
+    .stat-row label {
+        font-size: 0.75rem;
+    }
+    
+    .stat-value {
+        font-size: 1rem;
+    }
+    
+    .ps-audit-table th {
+        font-size: 0.75rem;
+        padding: var(--space-sm);
+    }
+    
+    .ps-audit-table td {
+        font-size: 0.875rem;
+        padding: var(--space-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .main-section {
+        padding: var(--space-md) var(--space-sm);
+    }
+    
+    .ps-glass-card,
+    .ps-form-content {
+        padding: var(--space-md);
+    }
+    
+    .ps-form-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+    
+    .stat-value {
+        font-size: 0.875rem;
+    }
+    
+    .chart-container {
+        min-height: 250px;
+        padding: var(--space-md);
+    }
+    
+    .table-container {
+        padding: var(--space-md);
+    }
+    
+    .ps-audit-table th,
+    .ps-audit-table td {
+        font-size: 0.75rem;
+        padding: var(--space-xs);
+    }
+    
+    .dot {
+        width: 8px;
+        height: 8px;
+        margin-right: 10px;
     }
 }
 

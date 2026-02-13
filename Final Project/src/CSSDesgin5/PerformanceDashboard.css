@@ -7,8 +7,9 @@
 
 .report-container-fluid {
   max-width: var(--container-max);
-  margin: 0 auto;
-  width: 100%;
+  margin-top:20px;
+  margin-left:50px;
+  margin-right:50px;
   padding: var(--space-xl) var(--space-md);
   flex: 1;
 }
@@ -146,7 +147,8 @@
   text-align: left;
   padding: var(--space-md);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: white;
+  background-color: rgb(68, 71, 115);
   text-transform: uppercase;
   border-bottom: 2px solid #f1f5f9;
 }

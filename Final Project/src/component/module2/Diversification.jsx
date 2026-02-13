@@ -44,11 +44,13 @@ export default function PortfolioDiversification() {
   const chartOptions = {
     plugins: {
       legend: { 
-        position: 'bottom', 
-        labels: { 
-          font: { family: 'Plus Jakarta Sans', weight: '600' }, 
-          usePointStyle: true 
-        } 
+        display: true,
+        position: 'bottom',
+        labels: {
+          font: { size: 14, weight: '600' },
+          usePointStyle: true,
+          padding: 15
+        }
       },
 
       datalabels: {
@@ -56,7 +58,7 @@ export default function PortfolioDiversification() {
         color: '#fff', 
         font: {
           weight: 'bold',
-          size: 14,
+          size: 16,
         },
         formatter: (value) => {
           return value > 0 ? `${value}%` : ''; 
@@ -65,7 +67,7 @@ export default function PortfolioDiversification() {
         align: 'center',
       }
     },
-    cutout: '70%',
+    cutout: '65%',
     maintainAspectRatio: false,
   };
 
@@ -108,7 +110,7 @@ export default function PortfolioDiversification() {
             </div>
 
             <div className="diversification-grid">
-              <div className="ps-input-card chart-container" style={{ position: 'relative', height: '300px' }}>
+              <div className="ps-input-card chart-container" style={{ position: 'relative', height: '400px' }}>
                 <Doughnut data={chartData} options={chartOptions} />
               </div>
 

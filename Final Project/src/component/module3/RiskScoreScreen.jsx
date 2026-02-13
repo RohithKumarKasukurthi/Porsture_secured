@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Navbar from "../../Navbar/Navbar";
 import "../../CSSDesgin3/RiskScoreScreen.css";
 import logo from "../../logo/logo.png";
@@ -224,12 +224,12 @@ export default function RiskScoreScreen() {
       <Navbar loginOptions={navOptions} />
       <main className="dashboard-content">
         <header className="content8">
-          <h1>RISK MANAGEMENT ENGINE</h1>
+          <h1>Risk Management Engine</h1>
         </header>
 
         <div className="flex-row">
           <section className="dashboard-section section-inputs">
-            <h3>Portfolio Selector</h3>
+            <h2>Portfolio Selector</h2>
 
             <div className="input-group">
               <label>Select Investor</label>
@@ -292,7 +292,7 @@ export default function RiskScoreScreen() {
           </section>
 
           <section className="dashboard-section section-score">
-            <h3>Risk Gauge</h3>
+            <h2>Risk Score</h2>
             <div className="score-circle">
               <span className="score-num">{currentScore}</span>
               <span className={`risk-badge ${risk.className}`}>{risk.label} Risk</span>
@@ -300,8 +300,8 @@ export default function RiskScoreScreen() {
           </section>
 
           <section className="dashboard-section section-chart">
-            <h3>Exposure Distribution</h3>
-            <div style={{ width: "100%", height: "220px" }}>
+            <h2>Exposure Distribution</h2>
+            <div style={{ width: "100%", height: "280px" }}>
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
@@ -311,17 +311,17 @@ export default function RiskScoreScreen() {
                       { name: "Derivative", value: allocation.Derivative },
                     ].filter((v) => v.value > 0)}
                     dataKey="value"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={50}
+                    outerRadius={70}
                     paddingAngle={5}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={true}
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                   >
                     {COLORS.map((color, index) => (
                       <Cell key={`cell-${index}`} fill={color} />
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

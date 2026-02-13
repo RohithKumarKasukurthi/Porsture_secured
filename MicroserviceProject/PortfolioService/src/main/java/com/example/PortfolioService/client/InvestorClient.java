@@ -4,13 +4,6 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-/**
- * Calls investor-service via Eureka discovery.
- *
- * IMPORTANT: Path must match Investor Service controller mappings.
- * Based on your working URL: /investors/getAllInvestors (no /api),
- * we use /investors/{id} here.
- */
 @FeignClient(name = "investor-service")
 public interface InvestorClient {
 

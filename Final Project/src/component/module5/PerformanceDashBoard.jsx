@@ -9,7 +9,8 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceLine
 } from "recharts";
 import "../../CSSDesgin5/PerformanceDashboard.css";
 
@@ -66,7 +67,10 @@ function PerformanceDashboard() {
     totalReturn,
     volatility,
     riskAdjusted,
-    finalValue
+    efficiencyScore,
+    finalValue,
+    baseGrowth,
+    invested
   } = useMemo(() => {
     if (
       !activeData ||
@@ -79,7 +83,10 @@ function PerformanceDashboard() {
         totalReturn: "0.00",
         volatility: "0.00",
         riskAdjusted: "0.00",
-        finalValue: 0
+        efficiencyScore: "0.0",
+        finalValue: 0,
+        baseGrowth: 0,
+        invested: 0
       };
     }
 
@@ -93,20 +100,57 @@ function PerformanceDashboard() {
       p => p.portfolioId === activeData.portfolioId
     );
 
-    const positiveCount = Math.ceil(sorted.length / 2);
-    const isPositive = index < positiveCount;
+    // Use portfolioId as seed for consistent random-like behavior
+    const seed = activeData.portfolioId || index;
+    
+    // True random distribution: 60% profit, 40% loss (not sequential)
+    // Use a hash-like function for better randomization
+    const hash = (seed * 2654435761) % 100; // Large prime for distribution
+    const isProfit = hash < 60; // 60% chance of profit
+    
+    // Generate unique decimal return percentage for EACH portfolio
+    let baseGrowth;
+    if (isProfit) {
+      // Profit: 2.0% to 15.9% with decimals
+      const variation = ((seed * 17 + seed * seed * 13) % 1400) / 100;
+      baseGrowth = 0.02 + variation / 100;
+    } else {
+      // Loss: -2.0% to -12.9% with decimals
+      const variation = ((seed * 23 + seed * seed * 19) % 1100) / 100;
+      baseGrowth = -0.02 - variation / 100;
+    }
 
-    const baseGrowth = isPositive ? 0.06 : -0.05;
+    // Use simple final value calculation for consistency
+    const finalVal = invested * (1 + baseGrowth);
 
+    // Create monthly data with realistic trading volatility
     const mData = marketPrices.map((p, i) => {
-      const noise = Math.sin((i + 1) * (index + 1)) * 0.03;
+      const progress = (i + 1) / marketPrices.length;
+      
+      // For last month, use exact final value for consistency
+      if (i === marketPrices.length - 1) {
+        return {
+          name: p.month,
+          value: Number(finalVal.toFixed(2))
+        };
+      }
+      
+      // Create realistic trading fluctuations with multiple sine waves
+      const volatilityFactor = 0.08; // 8% volatility range
+      const wave1 = Math.sin((i + 1) * 0.5 + seed) * volatilityFactor * 0.5;
+      const wave2 = Math.sin((i + 1) * 1.2 + seed * 2) * volatilityFactor * 0.3;
+      const wave3 = Math.sin((i + 1) * 2.5 + seed * 3) * volatilityFactor * 0.2;
+      const combinedNoise = wave1 + wave2 + wave3;
+      
+      // Add progressive growth with realistic fluctuations
+      const progressiveValue = invested * (1 + (baseGrowth * progress));
+      const fluctuation = progressiveValue * combinedNoise;
+      
       return {
         name: p.month,
-        value: Number((invested * (1 + baseGrowth + noise)).toFixed(2))
+        value: Number((progressiveValue + fluctuation).toFixed(2))
       };
     });
-
-    const finalVal = mData[mData.length - 1].value;
 
     const ret = invested
       ? (((finalVal - invested) / invested) * 100).toFixed(2)
@@ -123,6 +167,10 @@ function PerformanceDashboard() {
       returns.length
     ).toFixed(2);
 
+    // Calculate unique efficiency score with decimals: 60.0 to 90.9
+    const effScoreRaw = 60 + ((seed * 37 + seed * seed * 11) % 310) / 10;
+    const efficiencyScore = effScoreRaw.toFixed(1);
+
     const riskAdj = vol > 0 ? (ret / vol).toFixed(2) : "0.00";
 
     return {
@@ -130,30 +178,108 @@ function PerformanceDashboard() {
       totalReturn: ret,
       volatility: vol,
       riskAdjusted: riskAdj,
-      finalValue: finalVal
+      efficiencyScore: efficiencyScore,
+      finalValue: finalVal,
+      baseGrowth: baseGrowth,
+      invested: invested
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeData, portfolios]);
+
+  // Compute Y-axis domain with padding so chart auto-scales around data
+  const { yMin, yMax } = useMemo(() => {
+    const vals = (monthlyData || []).map(d => Number(d.value || 0));
+    if (!vals.length) return { yMin: 0, yMax: 1 };
+    const dataMin = Math.min(...vals);
+    const dataMax = Math.max(...vals);
+    const range = dataMax - dataMin;
+    const pad = range > 0 ? range * 0.05 : dataMax * 0.05 || 1;
+    // avoid negative lower bound for monetary values
+    const min = Math.max(0, dataMin - pad);
+    const max = dataMax + pad;
+    return { yMin: min, yMax: max };
+  }, [monthlyData]);
+
+  // Define navigation options early (before any returns)
+  const myLoginOptions = (
+    <div className="home-links">
+      <Link to="/investordashboard" className="ad">Home</Link>
+      <Link to="/P1" className="ad active">Performance Dashboard</Link>
+      <Link to="/P2" className="ad">Export Report</Link>
+    </div>
+  );
 
   if (loading) {
     return <div className="light-loader">Analyzing Market Data...</div>;
   }
 
-  const gainLoss = finalValue - (activeData?.investedAmount || 0);
-  const profitStatus =
-    gainLoss > 0 ? "PROFIT" : gainLoss < 0 ? "LOSS" : "NO CHANGE";
+  // Check if user has no portfolios
+  if (!portfolios || portfolios.length === 0) {
+    return (
+      <div className="performance-page">
+        <Navbar loginOptions={myLoginOptions} />
+        <div className="report-container-fluid">
+          <div className="empty-state">
+            <h2>No Portfolios Found</h2>
+            <p>You haven't created any portfolios yet. Please create a portfolio first to view performance data.</p>
+            <Link to="/investordashboard" className="empty-state-link">
+              Go to Dashboard
+            </Link>
+          </div>
+        </div>
+        <footer className="home-footer1">
+          <img src={logo} alt="logo" className="hero-logo-footer" />
+          <h5>© 2026 PortSure – Portfolio Risk Analysis</h5>
+        </footer>
+      </div>
+    );
+  }
+
+  // Check if activeData exists
+  if (!activeData) {
+    return (
+      <div className="performance-page">
+        <Navbar loginOptions={myLoginOptions} />
+        <div className="report-container-fluid">
+          <div style={{ textAlign: "center", padding: "50px", color: "#666" }}>
+            <h2>No Portfolio Selected</h2>
+            <p>Unable to load portfolio data. Please try again.</p>
+            <Link to="/investordashboard" style={{ color: "#0ea5e9", textDecoration: "underline" }}>
+              Go to Dashboard
+            </Link>
+          </div>
+        </div>
+        <footer className="home-footer1">
+          <img src={logo} alt="logo" className="hero-logo-footer" />
+          <h5>© 2026 PortSure – Portfolio Risk Analysis</h5>
+        </footer>
+      </div>
+    );
+  }
+
+  // Check if portfolio is approved before calculating gain/loss
+  const isApproved = allowedStatuses.includes(
+    String(activeData?.status || "").toUpperCase()
+  );
+
+  const gainLoss = isApproved ? finalValue - (activeData?.investedAmount || 0) : 0;
+  const profitStatus = isApproved 
+    ? (gainLoss > 0 ? "PROFIT" : gainLoss < 0 ? "LOSS" : "NO CHANGE")
+    : "PENDING";
 
   const reportPayload = {
     portfolioId: activeData.portfolioId,
     portfolioName: activeData.portfolioName,
     investedAmount: activeData.investedAmount,
-    finalValue,
+    finalValue: isApproved ? finalValue : activeData.investedAmount,
     gainLoss,
     profitStatus,
-    metrics: { totalReturn, volatility, riskAdjusted },
+    metrics: { totalReturn, volatility, riskAdjusted, efficiencyScore },
     generatedAt: new Date().toLocaleString()
   };
 
-  const myLoginOptions = (
+  // Update the Export Report link with reportPayload
+  const myLoginOptionsWithReport = (
     <div className="home-links">
       <Link to="/investordashboard" className="ad">Home</Link>
       <Link to="/P1" className="ad active">Performance Dashboard</Link>
@@ -165,7 +291,7 @@ function PerformanceDashboard() {
 
   return (
     <div className="performance-page">
-      <Navbar loginOptions={myLoginOptions} />
+      <Navbar loginOptions={myLoginOptionsWithReport} />
 
       <div className="report-container-fluid">
         <section className="portfolio-selector-bar">
@@ -197,33 +323,83 @@ function PerformanceDashboard() {
             </div>
             <div className="metric-card efficiency">
               <label>Efficiency Score</label>
-              <h3>{riskAdjusted}</h3>
+              <h3>{efficiencyScore}</h3>
             </div>
           </section>
 
           <div className="chart-panel">
-            <h4>Growth Projection (USD)</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
+            <h4>Portfolio Growth Trend (₹)</h4>
+            <ResponsiveContainer width="100%" height={380}>
+              <AreaChart data={monthlyData} margin={{ top: 20, right: 30, left: 80, bottom: 80 }}>
+                <defs>
+                  <linearGradient id="gradValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={baseGrowth >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0.5} />
+                    <stop offset="95%" stopColor={baseGrowth >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="strokeGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor={baseGrowth >= 0 ? "#059669" : "#dc2626"} />
+                    <stop offset="100%" stopColor={baseGrowth >= 0 ? "#10b981" : "#ef4444"} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  tickMargin={12}
+                  stroke="#9ca3af"
+                  label={{ value: 'Month', position: 'insideBottom', dy: 20, style: { fontSize: 14, fontWeight: 600, fill: "#374151" } }}
+                />
+                <YAxis
+                  tickFormatter={val => `₹${Number(val).toLocaleString()}`}
+                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  tickMargin={8}
+                  stroke="#9ca3af"
+                  domain={[yMin, yMax]}
+                  label={{ value: 'Value (₹)', angle: -90, position: 'left', dx: -45, style: { fontSize: 14, fontWeight: 600, fill: "#374151" } }}
+                />
+                <Tooltip 
+                  formatter={value => [`₹${Number(value).toLocaleString()}`, 'Portfolio Value']}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                  }}
+                  labelStyle={{ fontWeight: 600, color: '#374151' }}
+                />
+                <ReferenceLine 
+                  y={invested} 
+                  stroke="#9ca3af" 
+                  strokeDasharray="5 5" 
+                  strokeWidth={2}
+                  label={{ 
+                    value: `Initial Investment: ₹${Number(invested).toLocaleString()}`, 
+                    position: 'insideTopRight',
+                    fill: '#6b7280',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    offset: 10
+                  }}
+                />
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#0ea5e9"
-                  fill="#bae6fd"
+                  stroke="url(#strokeGrad)"
+                  strokeWidth={3}
+                  fill="url(#gradValue)"
+                  dot={false}
+                  activeDot={{ r: 7, strokeWidth: 2, fill: baseGrowth >= 0 ? "#10b981" : "#ef4444" }}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          <div style={{ marginTop: "40px" }} />
+          <div className="chart-spacing" />
 
           <div className="chart-panel">
             <h4>Portfolio Performance Summary</h4>
-            <table className="history-table">
+            <table className="portfolio-table">
               <thead>
                 <tr>
                   <th>Portfolio ID</th>
@@ -234,17 +410,30 @@ function PerformanceDashboard() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td data-label="Portfolio ID">PF-{activeData.portfolioId}</td>
-                  <td data-label="Initial Investment">₹ {activeData.investedAmount}</td>
-                  <td data-label="Final Value">₹ {finalValue.toFixed(2)}</td>
-                  <td data-label="Gain / Loss" style={{ color: gainLoss >= 0 ? "green" : "red" }}>
-                    ₹ {gainLoss.toFixed(2)}
-                  </td>
-                  <td data-label="Status" style={{ fontWeight: "bold" }}>
-                    {profitStatus}
-                  </td>
-                </tr>
+                {activeData && (
+                  <tr className="portfolio-row">
+                    <td data-label="Portfolio ID">PF-{activeData.portfolioId}</td>
+                    <td data-label="Initial Investment">₹ {Number(activeData.investedAmount || 0).toFixed(2)}</td>
+                    <td data-label="Final Value">
+                      ₹ {isApproved ? Number(finalValue).toFixed(2) : Number(activeData.investedAmount || 0).toFixed(2)}
+                    </td>
+                    <td data-label="Gain / Loss" className={gainLoss >= 0 ? "gain-positive" : gainLoss < 0 ? "gain-negative" : "gain-neutral"}>
+                      ₹ {Number(gainLoss || 0).toFixed(2)}
+                    </td>
+                    <td data-label="Status" className="status-bold">
+                      {
+                        (() => {
+                          const rawStatus = activeData.status || profitStatus;
+                          const statusKey = String(activeData.status || profitStatus || "").toLowerCase();
+                          if (statusKey) {
+                            return <span className={`status-badge ${statusKey}`}>{rawStatus}</span>;
+                          }
+                          return rawStatus;
+                        })()
+                      }
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

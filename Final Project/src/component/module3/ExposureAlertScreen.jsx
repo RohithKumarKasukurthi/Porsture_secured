@@ -287,7 +287,7 @@ export default function ExposureAlertScreen() {
   return (
     <div className="home">
       <Navbar loginOptions={navOptions} />
-      <h2 className="exposure-title">EXPOSURE ALERTS</h2>
+      <h2 className="exposure-title">Exposure Alert</h2>
 
       <main className="exposure-main-content">
         <section className="selection-card">

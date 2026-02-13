@@ -19,8 +19,11 @@ export default function PortSureHome() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const numValue = (name === "regulationType") ? value : (value === "" ? 0 : parseFloat(value));
-    setAllocations(prev => ({ ...prev, [name]: numValue }));
+    if (name === "regulationType") {
+      setAllocations(prev => ({ ...prev, [name]: value }));
+    } else {
+      setAllocations(prev => ({ ...prev, [name]: value === "" ? "" : parseFloat(value) || "" }));
+    }
   };
 
   const myLoginOptions = (
@@ -90,7 +93,7 @@ export default function PortSureHome() {
           <div className="card-stats5">
             <div className="stat-row">
               <label>Investment Amount</label>
-              <p className="stat-value">{state.investedAmount?.toLocaleString()}</p>
+              <p className="stat-value">₹{state.investedAmount?.toLocaleString()}</p>
             </div>
             <div className="stat-row">
               <label>Quantity</label>
@@ -112,8 +115,8 @@ export default function PortSureHome() {
             {/* VOLUME CARD */}
             <div className="ps-input-card1 full-width">
               <div className="input-header1">
-                <span className="icon">📊</span>
-                <label>Trade Quantity</label>
+                <span className="icon">📊 Trade Quantity</span>
+               <br/>
               </div>
               <input 
                 type="number" 
@@ -131,7 +134,8 @@ export default function PortSureHome() {
                 <input type="number" name="equity" value={allocations.equity} onChange={handleInputChange} />
                 <span className="suffix">%</span>
               </div>
-              <div className="calc-preview">{((state.investedAmount * allocations.equity) / 100).toLocaleString()}</div>
+              
+              <div className="calc-preview">Amount = ₹{((state.investedAmount * allocations.equity) / 100).toLocaleString()}</div>
             </div>
 
             <div className="ps-asset-card2">
@@ -140,7 +144,7 @@ export default function PortSureHome() {
                 <input type="number" name="bond" value={allocations.bond} onChange={handleInputChange} />
                 <span className="suffix">%</span>
               </div>
-              <div className="calc-preview">{((state.investedAmount * allocations.bond) / 100).toLocaleString()}</div>
+              <div className="calc-preview">Amount = ₹{((state.investedAmount * allocations.bond) / 100).toLocaleString()}</div>
             </div>
 
             <div className="ps-asset-card2">
@@ -149,13 +153,13 @@ export default function PortSureHome() {
                 <input type="number" name="derivative" value={allocations.derivative} onChange={handleInputChange} />
                 <span className="suffix">%</span>
               </div>
-              <div className="calc-preview">{((state.investedAmount * allocations.derivative) / 100).toLocaleString()}</div>
+              <div className="calc-preview">Amount = ₹{((state.investedAmount * allocations.derivative) / 100).toLocaleString()}</div>
             </div>
                <div className="ps-input-card1 full-width">
               <div className="input-header1">
-                <span className="icon">⚖️</span>
-                <label>Regulation</label>
+                <span className="icon">⚖️ Regulation</span>
               </div>
+              <br/>
               <select 
                 name="regulationType" 
                 value={allocations.regulationType} 
@@ -164,7 +168,7 @@ export default function PortSureHome() {
                 required
               >
                 <option value="">Select Regulation...</option>
-                <option value="UCITS">SEBI</option>
+                <option value="SEBI">SEBI</option>
                 <option value="MiFID_II">MiFID II (Standard)</option>
               </select>
             </div>

@@ -94,7 +94,7 @@
 }
 
 .ps-form-header {
-  margin-bottom: var(--space-2xl);
+ margin-bottom: 10px;
 }
 
 .ps-form-header h2 {
@@ -102,6 +102,7 @@
   font-weight: 800;
   color: var(--primary);
   letter-spacing: -0.025em;
+  margin-bottom:10px;
 }
 
 .ps-form-header p {
@@ -128,6 +129,31 @@
   transition: var(--transition-base);
 }
 
+.ps-asset-card2 .input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ps-asset-card2 input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: white;
+  transition: border 0.2s;
+}
+
+.ps-asset-card2 .suffix {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 .ps-input-card1:focus-within,
 .ps-asset-card2:focus-within {
   border-color: var(--accent);
@@ -143,15 +169,20 @@
   margin-bottom: var(--space-sm);
   display: block;
 }
-
+.input-header1 .icon {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: var(--space-sm);
+  display: block;
+}
 .ps-input-card1 input,
-.ps-asset-card2 input,
 .ps-input-card1 select {
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
   border: 1px solid #cbd5e1;
-  font-size: 1.25rem;
+  font-size: 15px;
   font-weight: 800;
   color: var(--primary);
   background: white;
@@ -176,7 +207,7 @@
 
 /* Action Bar */
 .ps-action-bar {
-  margin-top: var(--space-2xl);
+  margin-top: 10px;
   padding-top: var(--space-xl);
   border-top: 1px solid #e2e8f0;
 }
@@ -257,4 +288,78 @@
   .ps-form-content {
     padding: var(--space-xl);
   }
+}
+
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Apply animations */
+.ps-sidebar {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.ps-form-content {
+  animation: fadeInUp 0.6s ease-out 0.2s backwards;
+}
+
+.ps-input-card1,
+.ps-asset-card2 {
+  animation: fadeInUp 0.5s ease-out backwards;
+}
+
+.ps-input-card1:nth-child(1) { animation-delay: 0.1s; }
+.ps-input-card1:nth-child(2) { animation-delay: 0.2s; }
+.ps-input-card1:nth-child(3) { animation-delay: 0.3s; }
+
+.ps-asset-card2:nth-child(1) { animation-delay: 0.4s; }
+.ps-asset-card2:nth-child(2) { animation-delay: 0.5s; }
+.ps-asset-card2:nth-child(3) { animation-delay: 0.6s; }
+
+.sub:not(:disabled):active {
+  animation: pulse 0.3s ease-in-out;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, var(--accent) 0%, var(--primary) 50%, var(--accent) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
 }

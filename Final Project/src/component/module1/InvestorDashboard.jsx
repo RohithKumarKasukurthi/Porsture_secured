@@ -4,7 +4,7 @@ import Navbar from '../../Navbar/Navbar';
 import "../../CSSDesgin1/InvestorDashboard.css";
 import logo from "../../logo/logo.png";
 import Profilelogo from "../../logo/profilelogo.jpg";
-import NotificationPanel from '../module2/TradeCature';
+import NotificationPanel from './TradeCature';
 export default function InvestorDashboard() {
   const navigate = useNavigate();
   const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -29,6 +29,19 @@ export default function InvestorDashboard() {
     } else {
       setExpandedRowId(id);
       try {
+      
+        const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
+        const port = portfolioData.find(p => p.portfolioId === id);
+        const status = String(port?.status || '').toUpperCase();
+
+        if (!allowedStatuses.includes(status)) {
+          // Mark riskScore as null for clarity in UI and skip the network call
+          setPortfolioData(prevData => prevData.map(p =>
+            p.portfolioId === id ? { ...p, riskScore: null } : p
+          ));
+          return;
+        }
+
         const response = await fetch(`http://localhost:8081/api/risk-scores/portfolio/${id}`);
         if (response.ok) {
           const scoreData = await response.json();
@@ -36,9 +49,15 @@ export default function InvestorDashboard() {
           setPortfolioData(prevData => prevData.map(port =>
             port.portfolioId === id ? { ...port, riskScore: scoreData } : port
           ));
+        } else {
+          
+          setPortfolioData(prevData => prevData.map(p =>
+            p.portfolioId === id ? { ...p, riskScore: null } : p
+          ));
         }
       } catch (err) {
-        console.error("Risk Score not found or server error:", err);
+        
+        console.error("Risk Score fetch error:", err);
       }
     }
   };
@@ -68,12 +87,7 @@ export default function InvestorDashboard() {
       const exposureRes = await fetch(`http://localhost:8081/api/alerts/investor/${investorId}`);
       const exposureData = exposureRes.ok ? await exposureRes.json() : [];
 
-      const compliancePromises = portfolioData.map(port =>
-        fetch(`http://localhost:8081/api/compliance/logs/portfolio/${port.portfolioId}`)
-          .then(res => res.json())
-      );
-
-      const allLogsArrays = await Promise.all(compliancePromises);
+      const allLogsArrays = [];
 
       const breaches = allLogsArrays.flat()
         .filter(log => log.status === "BREACH" || log.status === "NON-COMPLIANT")
@@ -98,12 +112,14 @@ export default function InvestorDashboard() {
     if (portfolioData.length > 0) {
       fetchAlerts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portfolioData.length]);
   useEffect(() => {
     if (investorId) {
       fetchPortfolios();
     }
-  }, [fetchPortfolios, investorId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [investorId]);
 
   const handleResendClick = (port) => {
     setPortfolioName(port.portfolioName);
@@ -287,7 +303,7 @@ export default function InvestorDashboard() {
                       onChange={(e) => setPortfolioName(e.target.value)}
                     />
                   </label>
-                  <label>Initial Investment ($)
+                  <label>Initial Investment (₹)
                     <input
                       type="number"
                       placeholder="0.00"
@@ -434,7 +450,96 @@ export default function InvestorDashboard() {
                   <div className="stat-icon invested-icon">📈</div>
                   <div className="stat-content">
                     <p>Total Invested</p>
-                    <h3>{portfolioData.reduce((acc, curr) => acc + (curr.investedAmount || 0), 0).toLocaleString()}</h3>
+                    <h3>₹ {portfolioData.reduce((acc, curr) => acc + (curr.investedAmount || 0), 0).toLocaleString()}</h3>
+                  </div>
+                </div>
+                 <div className="stat-card">
+                  <div className="stat-icon gain-loss-icon">💰</div>
+                  <div className="stat-content">
+                    <p>Total Gain/Loss</p>
+                    <h3 style={{ 
+                      color: (() => {
+                        let totalGainLoss = 0;
+                        
+                        // Calculate total gain/loss by summing individual portfolio gains/losses
+                        portfolioData.forEach((curr, idx) => {
+                          const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
+                          const isApproved = allowedStatuses.includes(String(curr.status || '').toUpperCase());
+                          if (!isApproved) return;
+                          
+                          const invested = Number(curr.investedAmount || 0);
+                          
+                          // Use portfolioId as seed for consistent random-like behavior
+                          const seed = curr.portfolioId || idx;
+                          
+                          // True random distribution: 60% profit, 40% loss (not sequential)
+                          // Use a hash-like function for better randomization
+                          const hash = (seed * 2654435761) % 100; // Large prime for distribution
+                          const isProfit = hash < 60; // 60% chance of profit
+                          
+                          // Generate unique decimal return percentage for EACH portfolio
+                          let returnPercentage;
+                          if (isProfit) {
+                            // Profit: 2.0% to 15.9% with decimals
+                            const variation = ((seed * 17 + seed * seed * 13) % 1400) / 100;
+                            returnPercentage = 0.02 + variation / 100;
+                          } else {
+                            // Loss: -2.0% to -12.9% with decimals
+                            const variation = ((seed * 23 + seed * seed * 19) % 1100) / 100;
+                            returnPercentage = -0.02 - variation / 100;
+                          }
+                          
+                          const finalValue = invested * (1 + returnPercentage);
+                          const gainLoss = finalValue - invested;
+                          
+                          // Sum all gains and losses
+                          totalGainLoss += gainLoss;
+                        });
+                        
+                        return totalGainLoss >= 0 ? 'green' : 'red';
+                      })()
+                    }}>
+                      ₹ {(() => {
+                        let totalGainLoss = 0;
+                        
+                        // Calculate total gain/loss by summing individual portfolio gains/losses
+                        portfolioData.forEach((curr, idx) => {
+                          const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
+                          const isApproved = allowedStatuses.includes(String(curr.status || '').toUpperCase());
+                          if (!isApproved) return;
+                          
+                          const invested = Number(curr.investedAmount || 0);
+                          
+                          // Use portfolioId as seed for consistent random-like behavior
+                          const seed = curr.portfolioId || idx;
+                          
+                          // True random distribution: 60% profit, 40% loss (not sequential)
+                          // Use a hash-like function for better randomization
+                          const hash = (seed * 2654435761) % 100; // Large prime for distribution
+                          const isProfit = hash < 60; // 60% chance of profit
+                          
+                          // Generate unique decimal return percentage for EACH portfolio
+                          let returnPercentage;
+                          if (isProfit) {
+                            // Profit: 2.0% to 15.9% with decimals
+                            const variation = ((seed * 17 + seed * seed * 13) % 1400) / 100;
+                            returnPercentage = 0.02 + variation / 100;
+                          } else {
+                            // Loss: -2.0% to -12.9% with decimals
+                            const variation = ((seed * 23 + seed * seed * 19) % 1100) / 100;
+                            returnPercentage = -0.02 - variation / 100;
+                          }
+                          
+                          const finalValue = invested * (1 + returnPercentage);
+                          const gainLoss = finalValue - invested;
+                          
+                          // Sum all gains and losses
+                          totalGainLoss += gainLoss;
+                        });
+                        
+                        return totalGainLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      })()}
+                    </h3>
                   </div>
                 </div>
               </div>
@@ -481,7 +586,7 @@ export default function InvestorDashboard() {
                               <td data-label="Sr.No">{index + 1}</td>
                               <td data-label="Portfolio ID"><strong>PF-{port.portfolioId}</strong></td>
                               <td data-label="Name">{port.portfolioName}</td>
-                              <td data-label="Amount">{port.investedAmount?.toLocaleString()}</td>
+                              <td data-label="Amount">₹{port.investedAmount?.toLocaleString()}</td>
                               <td data-label="Status">
                                 <span className={`status-badge ${(port.status || 'Pending').toLowerCase()}`}>
                                   {port.status || "Pending"}

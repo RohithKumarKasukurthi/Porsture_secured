@@ -278,3 +278,65 @@
   color: white !important;
   transform: translateY(-1px);
 }
+
+
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes logoRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hero-logo1 {
+  animation: logoFloat 3s ease-in-out infinite;
+  transition: transform 0.3s ease;
+}
+
+.hero-logo1:hover {
+  animation: logoRotate 0.6s ease-in-out;
+}
+
+
+@keyframes textGlow {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(251, 191, 36, 0.6), 0 0 25px rgba(251, 191, 36, 0.4);
+  }
+}
+
+.home-h2 {
+  animation: textGlow 2s ease-in-out infinite;
+  transition: transform 0.3s ease;
+}
+
+.home-h2:hover {
+  transform: scale(1.05);
+}

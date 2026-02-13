@@ -5,11 +5,13 @@ import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logo from "../../logo/logo.png";
-
+ 
 export default function ComplianceLogs() {
   const [logs, setLogs] = useState([]);
   const [auditing, setAuditing] = useState(false);
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regulationFilter, setRegulationFilter] = useState("ALL");
+ 
   const fetchLogs = () => {
     fetch("http://localhost:8081/api/compliance/logs")
       .then(async (res) => {
@@ -22,19 +24,19 @@ export default function ComplianceLogs() {
       .then((data) => setLogs(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Report Load Error:", err));
   };
-
+ 
   useEffect(() => {
     fetchLogs();
   }, []);
-
+ 
   const deleteLog = async (logId) => {
     if (!window.confirm(`Are you sure you want to delete Log ID: ${logId}?`)) return;
-
+ 
     try {
       const response = await fetch(`http://localhost:8081/api/compliance/logs/${logId}`, {
         method: "DELETE",
       });
-
+ 
       if (response.ok) {
         alert("Log deleted successfully.");
         fetchLogs();
@@ -47,16 +49,16 @@ export default function ComplianceLogs() {
       alert("Connection error while trying to delete.");
     }
   };
-
+ 
   const generateCSV = () => {
-    const headers = "LogID,PortfolioID,RegulationType,Findings,Date,Status\n";
+    const headers = "SlNo,PortfolioID,RegulationType,Findings,Date,Status\n";
     const csvData = logs
       .map(
-        (l) =>
-          `${l.logId},PF-${l.portfolioId},${l.regulationType},"${String(l.findings ?? "").replace(/"/g, '""')}",${l.date},${l.complianceStatus}`
+        (l, index) =>
+          `${index + 1},PF-${l.portfolioId},${l.regulationType},"${String(l.findings ?? "").replace(/"/g, '""')}",${l.date},${l.complianceStatus}`
       )
       .join("\n");
-
+ 
     const blob = new Blob([headers + csvData], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -64,24 +66,24 @@ export default function ComplianceLogs() {
     a.download = `Compliance_Report_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
-
+ 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const tableColumn = ["Log ID", "Portfolio ID", "Regulation", "Findings", "Date", "Status"];
-    const tableRows = logs.map((log) => [
-      log.logId,
+    const tableColumn = ["Sl.No", "Portfolio ID", "Regulation", "Findings", "Date", "Status"];
+    const tableRows = logs.map((log, index) => [
+      index + 1,
       `PF-${log.portfolioId}`,
       log.regulationType,
       log.findings,
       log.date,
       log.complianceStatus,
     ]);
-
+ 
     doc.setFontSize(18);
     doc.text("Regulatory Compliance Report", 14, 15);
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
-
+ 
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
@@ -89,29 +91,35 @@ export default function ComplianceLogs() {
       theme: "grid",
       headStyles: { fillColor: [30, 41, 59] },
     });
-
+ 
     doc.save(`Compliance_Report_${new Date().toISOString().split("T")[0]}.pdf`);
   };
-
+ 
   const handleAuditAll = async () => {
-    if (!window.confirm("This will audit all portfolios. Existing logs will not be duplicated. Continue?")) return;
+    if (!window.confirm("Can you confirm to audit all portfolios")) return;
     setAuditing(true);
+   
+    // Clear all logs immediately
+    setLogs([]);
+   
     try {
-      const res = await fetch("/api/compliance/audit-all", { method: "POST" });
+      const res = await fetch("http://localhost:8081/api/compliance/audit-all", { method: "POST" });
       if (res.ok) {
         alert("Audit completed successfully!");
         fetchLogs();
       } else {
         alert("Audit failed: " + await res.text());
+        fetchLogs(); // Refetch to show any existing logs
       }
     } catch (err) {
       console.error("Audit error:", err);
       alert("Failed to trigger audit.");
+      fetchLogs(); // Refetch to show any existing logs
     } finally {
       setAuditing(false);
     }
   };
-
+ 
   const navOptions = (
     <div className="home-links">
       <Link to="/C1" className="ad">Home</Link>
@@ -120,27 +128,61 @@ export default function ComplianceLogs() {
       <Link to="/r1" className="ad">Exposure Alert</Link>
     </div>
   );
-
+ 
+  // Filter logs based on regulation and search term
+  const filteredLogs = logs.filter((log) => {
+    // First filter by regulation type
+    if (regulationFilter !== "ALL") {
+      const logRegulation = (log.regulationType || "").toUpperCase();
+      if (logRegulation !== regulationFilter) return false;
+    }
+   
+    // Then filter by portfolio ID search
+    if (!searchTerm) return true;
+    const portfolioId = `PF-${log.portfolioId}`.toLowerCase();
+    return portfolioId.includes(searchTerm.toLowerCase());
+  });
+ 
   return (
     <div className="report-container">
       <Navbar loginOptions={navOptions} />
-
+ 
       <div className="report-content">
         <div className="report-header">
           <h2>Regulatory Compliance Report</h2>
           <div className="export-actions">
-            <button className="export-btn" onClick={handleAuditAll} disabled={auditing} style={{ background: "#1e293b", marginRight: "0.5rem" }}>
+            <button className="export-btn audit" onClick={handleAuditAll} disabled={auditing}>
               {auditing ? "Auditing..." : "Run Audit"}
             </button>
             <button className="export-btn csv" onClick={generateCSV}>CSV</button>
             <button className="export-btn pdf" onClick={generatePDF}>PDF</button>
           </div>
         </div>
-
+ 
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by Portfolio ID (e.g., PF-1001)"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+         
+          <select
+            className="regulation-filter"
+            value={regulationFilter}
+            onChange={(e) => setRegulationFilter(e.target.value)}
+          >
+            <option value="ALL">All Regulations</option>
+            <option value="SEBI">SEBI</option>
+            <option value="MIFID_II">MiFID_II</option>
+          </select>
+        </div>
+ 
         <table className="compliance-table">
           <thead>
             <tr>
-              <th>Log ID</th>
+              <th>Sl.No</th>
               <th>Portfolio ID</th>
               <th>Regulation Type</th>
               <th>Findings</th>
@@ -149,29 +191,34 @@ export default function ComplianceLogs() {
               <th>Actions</th>
             </tr>
           </thead>
-
+ 
           <tbody>
-            {logs.length > 0 ? (
-              logs.map((log) => (
+            {filteredLogs.length > 0 ? (
+              filteredLogs.map((log, index) => (
                 <tr key={log.logId}>
-                  <td>{log.logId}</td>
-                  <td>PF-{log.portfolioId}</td>
-                  <td>{log.regulationType}</td>
-                  <td className="findings-text">{log.findings}</td>
-                  <td>{log.date}</td>
-                  <td>
-                    <span className={`status-pill ${String(log.complianceStatus || "").toLowerCase().replace('non-compliant', 'breach').replace('compliant', 'compliant')}`}>
+                  <td data-label="Sl.No">{index + 1}</td>
+                  <td data-label="Portfolio ID">PF-{log.portfolioId}</td>
+                  <td data-label="Regulation Type">{log.regulationType}</td>
+                  <td data-label="Findings" className="findings-text">{log.findings}</td>
+                  <td data-label="Date">{log.date}</td>
+                  <td data-label="Status">
+                    <span className={`status-pill ${
+                      (log.complianceStatus || "").toUpperCase().includes('NON-COMPLIANCE') ||
+                      (log.complianceStatus || "").toUpperCase().includes('NON-COMPLIANT') ||
+                      (log.complianceStatus || "").toUpperCase().includes('BREACH')
+                        ? 'non-compliance'
+                        : 'compliance'
+                    }`}>
                       {log.complianceStatus}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Actions">
                     <button
                       className="delete-btn-small"
                       onClick={() => deleteLog(log.logId)}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.2rem" }}
                       title="Delete log"
                     >
-                      🗑️
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -179,14 +226,14 @@ export default function ComplianceLogs() {
             ) : (
               <tr>
                 <td colSpan="7" style={{ textAlign: "center" }}>
-                  No compliance logs available.
+                  {searchTerm ? `No logs found for "${searchTerm}"` : "No compliance logs available."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
+ 
       <footer className="home-footer1">
         <img src={logo} alt="PortSure footer logo" className="hero-logo-footer" />
         <h5>© 2025 PortSure – Portfolio Risk Analysis & Investment Compliance System</h5>

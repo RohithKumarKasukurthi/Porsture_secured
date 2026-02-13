@@ -68,4 +68,29 @@ public class InvestorController {
         if (success) return ResponseEntity.ok("Password changed");
         return ResponseEntity.status(401).body("Verification failed");
     }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+        Optional<Investor> investor = service.findByEmail(email);
+        if (investor.isPresent()) {
+            return ResponseEntity.ok("Email exists");
+        }
+        return ResponseEntity.status(404).body("Email not found");
+    }
+
+    @PutMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String newPassword = body.get("newPassword");
+        
+        try {
+            boolean success = service.resetPassword(email, newPassword);
+            if (success) {
+                return ResponseEntity.ok("Password reset successfully");
+            }
+            return ResponseEntity.status(404).body("Email not found");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error resetting password: " + e.getMessage());
+        }
+    }
 }

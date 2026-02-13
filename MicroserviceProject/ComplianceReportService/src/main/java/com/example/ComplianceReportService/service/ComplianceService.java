@@ -1,13 +1,16 @@
 package com.example.ComplianceReportService.service;
 
 import com.example.ComplianceReportService.client.PortfolioClient;
+import com.example.ComplianceReportService.dto.PortfolioDto;
 import com.example.ComplianceReportService.entity.ComplianceReport;
 import com.example.ComplianceReportService.repositiory.ComplianceReportRepositiory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ComplianceService {
@@ -17,69 +20,88 @@ public class ComplianceService {
 
     @Autowired
     private PortfolioClient portfolioClient;
-
+    
     public List<ComplianceReport> getAllLogs() {
         return logRepository.findAll();
     }
 
-    public String auditPortfolio(Long portfolioId) {
-        PortfolioClient.PortfolioDto p;
+    @Transactional
+    public List<ComplianceReport> auditAllPortfolios() {
         try {
-            p = portfolioClient.getPortfolioById(portfolioId);
-        } catch (Exception ex) {
-            return "Error: Unable to fetch Portfolio ID " + portfolioId + " from portfolio-service. " + ex.getMessage();
-        }
+            // UPDATED: Now uses the standalone PortfolioDto class
+            List<PortfolioDto> allPortfolios = portfolioClient.getAllPortfolios();
 
-        if (p == null) {
-            return "Error: Portfolio ID " + portfolioId + " not found.";
-        }
-
-        // Delete existing logs for this portfolio
-        logRepository.deleteByPortfolioId(Math.toIntExact(portfolioId));
-
-        double equity = p.getEquityPercentage() == null ? 0.0 : p.getEquityPercentage();
-        double derivative = p.getDerivativePercentage() == null ? 0.0 : p.getDerivativePercentage();
-        double bond = p.getBondPercentage() == null ? 0.0 : p.getBondPercentage();
-        String regulationType = p.getRegulationType() != null ? p.getRegulationType() : "SEBI";
-
-        String status = "COMPLIANT";
-        String findings = "No compliance violations detected";
-
-        if (derivative > bond) {
-            status = "NON-COMPLIANT";
-            findings = "VIOLATION: Insufficient Coverage. Bond % must cover Derivative risk.";
-        } else if (derivative > 50) {
-            status = "NON-COMPLIANT";
-            findings = "VIOLATION: Derivative exposure exceeds the 50% regulatory cap.";
-        } else if (bond < 10) {
-            status = "NON-COMPLIANT";
-            findings = "VIOLATION: Insufficient liquidity. Bond allocation must be at least 10%.";
-        }
-
-        ComplianceReport log = new ComplianceReport(
-                Math.toIntExact(p.getPortfolioId()),
-                regulationType,
-                findings,
-                status,
-                LocalDate.now()
-        );
-        logRepository.save(log);
-
-        return "Audit Completed for Portfolio ID: " + p.getPortfolioId();
-    }
-
-    public String auditAllPortfolios() {
-        // This would need a method to get all portfolio IDs from PortfolioService
-        // For now, manually audit portfolios 1-10
-        StringBuilder result = new StringBuilder();
-        for (long i = 1; i <= 10; i++) {
-            try {
-                auditPortfolio(i);
-                result.append("Portfolio ").append(i).append(" audited. ");
-            } catch (Exception e) {
-                result.append("Portfolio ").append(i).append(" failed. ");
+            if (allPortfolios == null || allPortfolios.isEmpty()) {
+                return logRepository.findAll();
             }
+
+            // UPDATED: Loop variable type changed to PortfolioDto
+            for (PortfolioDto p : allPortfolios) {
+                try {
+                    // NULL SAFETY: Skip portfolios with missing percentage data
+                    if (p.getPortfolioId() == null ||
+                            p.getEquityPercentage() == null ||
+                            p.getDerivativePercentage() == null ||
+                            p.getBondPercentage() == null) {
+                        continue;
+                    }
+
+                    // Prepare Variables
+                    // Note: Ensure your repository accepts Integer, otherwise consider changing entity to Long
+                    Integer pIdAsInt = p.getPortfolioId().intValue();
+                    double equity = p.getEquityPercentage();
+                    double derivative = p.getDerivativePercentage();
+                    double bond = p.getBondPercentage();
+
+                    // Default to SEBI if null, otherwise use the portfolio's type
+                    String regulationType = (p.getRegulationType() != null) ? p.getRegulationType() : "SEBI";
+                    String status = "COMPLIANCE"; // Removed trailing space for cleanliness
+                    String findings = "No compliance violations detected";
+
+                    if ("SEBI".equalsIgnoreCase(regulationType)) {
+                        // --- SEBI RULES ---
+                        if (derivative > bond) {
+                            status = "NON-COMPLIANCE";
+                            findings = "SEBI VIOLATION: Risk too high. Derivative % cannot exceed Bond %.";
+                        } else if (derivative > 50) {
+                            status = "NON-COMPLIANCE";
+                            findings = "SEBI VIOLATION: Regulatory Cap. Derivatives cannot exceed 50%.";
+                        } else if (bond < 10) {
+                            status = "NON-COMPLIANCE";
+                            findings = "SEBI VIOLATION: Liquidity Issue. Bonds must be at least 10%.";
+                        }
+                    } else if ("MiFID II".equalsIgnoreCase(regulationType)) {
+                        // --- MiFID II RULES ---
+                        if (derivative > equity) {
+                            status = "NON-COMPLIANCE";
+                            findings = "MiFID WARNING: Speculative Portfolio (Derivatives > Equity).";
+                        } else if ((equity + derivative) > 80) {
+                            status = "NON-COMPLIANCE";
+                            findings = "MiFID WARNING: High Risk Allocation (>80% Risk Assets).";
+                        }
+                    }
+
+                    Optional<ComplianceReport> existingLog = logRepository.findByPortfolioId(pIdAsInt);
+                    ComplianceReport log = existingLog.orElse(new ComplianceReport());
+
+                    log.setPortfolioId(pIdAsInt);
+                    log.setComplianceStatus(status);
+                    log.setFindings(findings);
+                    log.setRegulationType(regulationType);
+                    log.setDate(LocalDate.now());
+
+                    logRepository.save(log);
+
+
+                } catch (Exception e) {
+                    
+                }
+            }
+
+            return logRepository.findAll();
+
+        } catch (Exception e) {
+            throw e;
         }
-        return result.toString();
     }
 }

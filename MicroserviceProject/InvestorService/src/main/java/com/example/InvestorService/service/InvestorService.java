@@ -70,4 +70,25 @@ public class InvestorService {
             return false;
         }).orElse(false);
     }
+
+    public Optional<Investor> findByEmail(String email) {
+        return repository.findByEmail(email);
+    }
+
+    public boolean resetPassword(String email, String newPassword) {
+        Optional<Investor> investorOpt = repository.findByEmail(email);
+        if (investorOpt.isPresent()) {
+            Investor investor = investorOpt.get();
+            
+            // Check if new password is same as old password
+            if (investor.getPassword().equals(newPassword)) {
+                throw new IllegalArgumentException("New password cannot be the same as your old password");
+            }
+            
+            investor.setPassword(newPassword);
+            repository.save(investor);
+            return true;
+        }
+        return false;
+    }
 }

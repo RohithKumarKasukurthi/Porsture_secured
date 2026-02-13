@@ -2,7 +2,7 @@ import './App.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './component/module2/PortSureHome'
 import Home from './component/HomePage'
-import Trade from './component/module2/TradeCature'
+import Trade from './component/module1/TradeCature'
 import Di from './component/module2/Diversification'
 import LoginPage from './component/module1/LoginPage1';
 import Asset from './component/module2/AssetManager';
@@ -17,7 +17,6 @@ import Per from './component/module5/PerformanceDashBoard';
 import Re from './component/module5/ReportExport';
 import Request from './component/module2/Request';
 import ForgotPassword from './component/module1/ForgotPassword';
-
 
 function App() {
   return (

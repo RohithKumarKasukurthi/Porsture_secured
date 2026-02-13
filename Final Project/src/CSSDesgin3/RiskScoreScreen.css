@@ -15,7 +15,6 @@
     font-weight: 800;
     color: var(--primary);
     letter-spacing: -0.05em;
-    font-family: 'Outfit', sans-serif;
 }
 
 .flex-row {
@@ -23,8 +22,8 @@
     grid-template-columns: 1fr 1fr 1fr;
     gap: var(--space-xl);
     max-width: var(--container-max);
-    margin: 0 auto;
-    width: 100%;
+    margin-left:40px;
+    margin-right:40px;
     padding: 0 var(--space-md) var(--space-xl);
 }
 
@@ -36,8 +35,8 @@
     border: 1px solid #e2e8f0;
 }
 
-.dashboard-section h3 {
-    font-size: 1.125rem;
+.dashboard-section h2 {
+    font-size: 23px;
     font-weight: 700;
     color: var(--primary);
     margin-bottom: var(--space-lg);
@@ -178,30 +177,48 @@ input {
 /* Table */
 .section-table {
     max-width: var(--container-max);
-    margin: 0 auto var(--space-2xl);
-    width: 100%;
+    margin-left:50px;
+    margin-right:50px;
+    
     padding: 0 var(--space-md);
 }
-
+.section-table h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top:50px;
+    margin-left:30px;
+    margin-bottom: var(--space-lg);
+}
 .simple-table {
-    width: 100%;
+    margin-left:50px;
+    margin-right:50px;
+    width:90%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .simple-table th {
     text-align: left;
     padding: var(--space-md);
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: white;
     text-transform: uppercase;
+    background-color: rgb(66, 73, 105);
     border-bottom: 2px solid #f1f5f9;
 }
+
+.simple-table th:nth-child(1) { width: 25%; }
+.simple-table th:nth-child(2) { width: 15%; }
+.simple-table th:nth-child(3) { width: 20%; }
+.simple-table th:nth-child(4) { width: 40%; }
 
 .simple-table td {
     padding: var(--space-md);
     border-bottom: 1px solid #f1f5f9;
     font-weight: 600;
     color: var(--primary);
+    word-wrap: break-word;
 }
 
 .status-tag {
@@ -233,7 +250,7 @@ input {
 
     .simple-table tr {
         display: block;
-        background: white;
+        background: rgb(77, 79, 97);
         border-radius: var(--radius-lg);
         margin-bottom: var(--space-md);
         box-shadow: var(--shadow-sm);
@@ -254,4 +271,15 @@ input {
         font-size: 0.75rem;
         text-transform: uppercase;
     }
+}
+
+
+.section-chart {
+    overflow: hidden;
+}
+
+.section-chart > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

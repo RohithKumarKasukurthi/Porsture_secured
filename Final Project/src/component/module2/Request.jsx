@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; 
 import Navbar from '../../Navbar/Navbar';
 import logo from '../../logo/logo.png';
-import '../../CSSDesgin1/AssetManager.css';
+import '../../CSSDesgin2/AssetManager.css';
+
 
 export default function Request() {
   const [requests, setRequests] = useState([]);
@@ -22,12 +23,7 @@ export default function Request() {
     }
 
     const data = await response.json();
-
-    // If your backend returns "Pending" (capital P) keep this,
-    // otherwise change to "PENDING" depending on how your PortfolioService serializes enum.
     const pending = data.filter(p => (p.status || "").toString() === "Pending");
-
-    // Collect unique investorIds from pending portfolios
     const investorIds = Array.from(
       new Set(
         pending
@@ -139,14 +135,14 @@ const handleGoToAllocation = (req) => {
                       <td>{req.investor_name || 'Unknown'}</td>
                       <td><strong>PF-{req.portfolioId}</strong></td>
                       <td>{req.portfolioName || 'General'}</td>
-                      <td>{req.investedAmount || '0'}</td>
+                      <td>₹{req.investedAmount || '0'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '10px' }}>
                           <button 
                             className="allocate-btn" 
                             onClick={() => handleGoToAllocation(req)}
                             style={{
-                              background: '#2563eb', 
+                              background: '#37445fff', 
                               color: 'white', border: 'none', 
                               padding: '5px 12px', borderRadius: '4px', cursor: 'pointer'
                             }}

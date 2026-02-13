@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import '../../CSSDesgin1/AssetManager.css';
+import '../../CSSDesgin2/AssetManager.css';
 import Navbar from '../../Navbar/Navbar';
 import logo from '../../logo/logo.png';
 import portfoliologo from '../../logo/profilelogo.jpg';
@@ -8,6 +8,7 @@ import portfoliologo from '../../logo/profilelogo.jpg';
 export default function AssetManager() {
   const [settlementData, setSettlementData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,6 +76,7 @@ export default function AssetManager() {
         }));
 
         setSettlementData(formattedData);
+        setPendingCount(formattedData.filter(p => p.status === "PENDING").length);
       } catch (error) {
         console.error("Database connection error:", error);
       } finally {
@@ -141,7 +143,12 @@ export default function AssetManager() {
         Home
       </button>
 
-      <Link to="/received-requests" className="ad">Requests</Link>
+      <Link to="/received-requests" className="ad" style={{ position: 'relative' }}>
+        Requests
+        {pendingCount > 0 && (
+          <span className="notification-badge">{pendingCount}</span>
+        )}
+      </Link>
 
       <div
         className="profile-container"
@@ -202,13 +209,7 @@ export default function AssetManager() {
           <div className="profile-page">
             <div className="profile-card">
               <div className="profile-banner">
-                <button
-                  type="button"
-                  className="profile-back-btn"
-                  onClick={() => setActiveView("dashboard")}
-                >
-                  Back
-                </button>
+                
 
                 <div className="profile-banner-row">
                   <div className="profile-avatar-wrap">
@@ -233,16 +234,6 @@ export default function AssetManager() {
                   <div className="profile-field">
                     <span className="profile-label">Email Address</span>
                     <div className="profile-value">{profile.email}</div>
-                  </div>
-
-                  <div className="profile-field">
-                    <span className="profile-label">Designation</span>
-                    <div className="profile-value">{profile.role}</div>
-                  </div>
-
-                  <div className="profile-field">
-                    <span className="profile-label">Account Security</span>
-                    <div className="profile-value muted">Encrypted Password</div>
                   </div>
                 </div>
               </div>
@@ -317,7 +308,7 @@ export default function AssetManager() {
                             )}
                           </td>
                           <td data-label="Quantity">{s.quantity}</td>
-                          <td data-label="Price">{s.price?.toLocaleString()}</td>
+                          <td data-label="Price">₹ {s.price?.toLocaleString()}</td>
                           <td data-label="Status">
                             <span className={`status-pill ${s.status.toLowerCase()}`}>
                               {s.status === "APPROVED" ? "EXECUTED" : s.status}

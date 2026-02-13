@@ -1,6 +1,7 @@
 .exposure-main-content {
-  max-width: var(--container-max);
-  margin: 0 auto;
+ 
+  margin-left: 50px;
+  margin-right:50px;
   padding: var(--space-xl) var(--space-md);
   display: flex;
   flex-direction: column;
@@ -110,9 +111,10 @@
 .simple-exposure-table th,
 .simpletable1 th {
   text-align: left;
+  background-color: rgb(69, 70, 110);
   padding: var(--space-md);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: white;
   text-transform: uppercase;
   border-bottom: 2px solid #f1f5f9;
 }
