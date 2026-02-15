@@ -2,6 +2,7 @@ package com.example.InvestorService.controller;
 
 import com.example.InvestorService.entity.Investor;
 import com.example.InvestorService.service.InvestorService;
+import com.example.InvestorService.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,9 @@ public class InvestorController {
 
     @Autowired
     private InvestorService service;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @GetMapping("/getAllInvestors")
     public ResponseEntity<?> getAll() {
@@ -42,11 +46,15 @@ public class InvestorController {
         Optional<Investor> userOpt = service.login(loginData.getEmail(), loginData.getPassword());
 
         if (userOpt.isPresent()) {
-            Investor user = userOpt.get();
-            user.setPassword(null); // Security
-            return ResponseEntity.ok(user);
+            Investor user = userOpt.get(); // Password is not null here, but we should not return it.
+            // However, service.login returns user *after* matching password.
+            // Wait, service.login returns the entity from DB.
+            // We should mask password before returning in 'user' key, or use DTO.
+            // Existing code did user.setPassword(null).
+            user.setPassword(null);
+            String token = jwtUtil.generateToken(user.getEmail());
+            return ResponseEntity.ok(Map.of("token", token, "user", user));
         } else {
-            // This is where your error was happening; now it's a direct return
             return ResponseEntity.status(401).body("Invalid credentials");
         }
     }
@@ -65,7 +73,8 @@ public class InvestorController {
     @PutMapping("/update-password/{id}")
     public ResponseEntity<?> updatePassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
         boolean success = service.changePassword(id, body.get("password"), body.get("fullName"));
-        if (success) return ResponseEntity.ok("Password changed");
+        if (success)
+            return ResponseEntity.ok("Password changed");
         return ResponseEntity.status(401).body("Verification failed");
     }
 
@@ -82,7 +91,7 @@ public class InvestorController {
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
         String email = body.get("email");
         String newPassword = body.get("newPassword");
-        
+
         try {
             boolean success = service.resetPassword(email, newPassword);
             if (success) {
