@@ -20,9 +20,16 @@ public class ComplianceService {
 
     @Autowired
     private PortfolioClient portfolioClient;
-    
+
     public List<ComplianceReport> getAllLogs() {
         return logRepository.findAll();
+    }
+
+    public ComplianceReport createLog(ComplianceReport log) {
+        if (log.getDate() == null) {
+            log.setDate(LocalDate.now());
+        }
+        return logRepository.save(log);
     }
 
     @Transactional
@@ -47,7 +54,8 @@ public class ComplianceService {
                     }
 
                     // Prepare Variables
-                    // Note: Ensure your repository accepts Integer, otherwise consider changing entity to Long
+                    // Note: Ensure your repository accepts Integer, otherwise consider changing
+                    // entity to Long
                     Integer pIdAsInt = p.getPortfolioId().intValue();
                     double equity = p.getEquityPercentage();
                     double derivative = p.getDerivativePercentage();
@@ -92,9 +100,8 @@ public class ComplianceService {
 
                     logRepository.save(log);
 
-
                 } catch (Exception e) {
-                    
+
                 }
             }
 

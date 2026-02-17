@@ -33,6 +33,16 @@ public class ComplianceReportController {
         return service.getAllLogs();
     }
 
+    @PostMapping("/logs/create")
+    public ResponseEntity<ComplianceReport> createLog(@RequestBody ComplianceReport log) {
+        try {
+            ComplianceReport createdLog = service.createLog(log);
+            return ResponseEntity.ok(createdLog);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
     @DeleteMapping("/logs/{logId}")
     public ResponseEntity<String> deleteLog(@PathVariable Long logId) {
         if (logRepository.existsById(logId)) {
