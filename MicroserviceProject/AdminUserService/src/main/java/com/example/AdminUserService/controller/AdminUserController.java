@@ -40,7 +40,8 @@ public class AdminUserController {
             Authentication authenticate = authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(email, password));
             if (authenticate.isAuthenticated()) {
-                String token = jwtUtil.generateToken(email);
+                AdminUser user = adminUserRepositiory.findByEmail(email).orElseThrow();
+                String token = jwtUtil.generateToken(email, user.getRole());
                 return ResponseEntity.ok(Map.of("token", token));
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
