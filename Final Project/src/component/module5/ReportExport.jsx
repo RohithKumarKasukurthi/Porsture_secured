@@ -12,25 +12,45 @@ function ExportReport() {
   const [portfolios, setPortfolios] = useState([]);
   const [selectedPortfolios, setSelectedPortfolios] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const investorId = loggedInUser.investorId || loggedInUser.id;
+
+  // Session Isolation: Investor context
+  const loggedInUser = JSON.parse(localStorage.getItem("investor_user") || "{}");
+  // Handle nested user object
+  const userData = loggedInUser.user || loggedInUser;
+  const investorId = userData.investorId || userData.id;
+  const token = loggedInUser.token;
 
   useEffect(() => {
-    if (investorId) {
-      fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`)
-        .then(res => res.json())
-        .then(data => {
-          setPortfolios(data || []);
-          const passedData = location.state?.reportData;
-          if (passedData?.portfolioId) {
-            setSelectedPortfolios([passedData.portfolioId]);
-          }
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
+    if (!investorId || !token) {
+      // Stop loading if no valid user/token, allows rendering the "No Portfolios/Empty" state or redirect logic
+      setLoading(false);
+      return;
     }
-  }, [investorId, location.state]);
+
+    fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
+      .then(data => {
+        setPortfolios(data || []);
+        const passedData = location.state?.reportData;
+        if (passedData?.portfolioId) {
+          setSelectedPortfolios([passedData.portfolioId]);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching portfolios:", err);
+        setLoading(false);
+      });
+  }, [investorId, token, location.state]);
 
   const myLoginOptions = (
     <div className='home-links'>
@@ -70,7 +90,7 @@ function ExportReport() {
   const calculateMetrics = (portfolio) => {
     const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
     const isApproved = allowedStatuses.includes(String(portfolio.status || '').toUpperCase());
-    
+
     if (!isApproved) {
       return {
         finalValue: portfolio.investedAmount,
@@ -84,15 +104,15 @@ function ExportReport() {
 
     const invested = Number(portfolio.investedAmount || 0);
     const index = portfolios.findIndex(p => p.portfolioId === portfolio.portfolioId);
-    
+
     // Use portfolioId as seed for consistent random-like behavior
     const seed = portfolio.portfolioId || index;
-    
+
     // True random distribution: 60% profit, 40% loss (not sequential)
     // Use a hash-like function for better randomization
     const hash = (seed * 2654435761) % 100; // Large prime for distribution
     const isProfit = hash < 60; // 60% chance of profit
-    
+
     // Generate unique decimal return percentage for EACH portfolio
     let returnPercentage;
     if (isProfit) {
@@ -104,13 +124,13 @@ function ExportReport() {
       const variation = ((seed * 23 + seed * seed * 19) % 1100) / 100;
       returnPercentage = -0.02 - variation / 100;
     }
-    
+
     // Simple calculation without monthly noise for consistency
     const finalValue = invested * (1 + returnPercentage);
     const gainLoss = finalValue - invested;
     const profitStatus = gainLoss > 0 ? 'PROFIT' : gainLoss < 0 ? 'LOSS' : 'NO CHANGE';
     const totalReturn = ((gainLoss / invested) * 100).toFixed(2);
-    
+
     // Calculate unique volatility and efficiency with decimals for each portfolio
     const volatilityRaw = 5 + ((seed * 41 + seed * seed * 7) % 210) / 10;
     const volatility = volatilityRaw.toFixed(2);
@@ -192,7 +212,7 @@ function ExportReport() {
       ['Portfolio Performance Report'],
       ['Generated At', new Date().toLocaleString()],
       [],
-          ['Portfolio ID', 'Portfolio Name', 'Initial Investment', 'Final Value', 'Gain / Loss', 'Total Return (%)', 'Volatility', 'Risk Score']
+      ['Portfolio ID', 'Portfolio Name', 'Initial Investment', 'Final Value', 'Gain / Loss', 'Total Return (%)', 'Volatility', 'Risk Score']
     ];
 
     portfolios
@@ -225,17 +245,17 @@ function ExportReport() {
       <div className='report-export-container'>
         <div className='export-preview'>
           <h1>Export Portfolio Reports</h1>
-          
+
           <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f0f9ff', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <h3 style={{ margin: 0 }}>Select Portfolios to Export</h3>
-              <button 
+              <button
                 onClick={selectAllPortfolios}
-                style={{ 
-                  padding: '8px 16px', 
-                  backgroundColor: '#3b417dff', 
-                  color: 'white', 
-                  border: 'none', 
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#3b417dff',
+                  color: 'white',
+                  border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
@@ -252,9 +272,9 @@ function ExportReport() {
             {portfolios.map(portfolio => {
               const metrics = calculateMetrics(portfolio);
               const isSelected = selectedPortfolios.includes(portfolio.portfolioId);
-              
+
               return (
-                <div 
+                <div
                   key={portfolio.portfolioId}
                   onClick={() => togglePortfolioSelection(portfolio.portfolioId)}
                   style={{
@@ -269,8 +289,8 @@ function ExportReport() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <input 
-                        type='checkbox' 
+                      <input
+                        type='checkbox'
                         checked={isSelected}
                         onChange={(e) => { e.stopPropagation(); togglePortfolioSelection(portfolio.portfolioId); }}
                         style={{ marginRight: '10px', cursor: 'pointer' }}

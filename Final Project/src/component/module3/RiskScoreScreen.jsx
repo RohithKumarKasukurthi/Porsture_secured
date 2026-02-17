@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import Navbar from "../../Navbar/Navbar";
 import "../../CSSDesgin3/RiskScoreScreen.css";
@@ -30,6 +30,19 @@ export default function RiskScoreScreen() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Session & Auth
+  // Session Isolation: Compliance context
+  const loggedInUser = JSON.parse(localStorage.getItem("compliance_user") || "{}");
+  const token = loggedInUser.token;
+
+  const navigate = useNavigate(); // Ensure you import useNavigate from 'react-router-dom'
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
+
   const navOptions = (
     <div className="home-links">
       <Link to="/C1" className="ad">Home</Link>
@@ -40,10 +53,12 @@ export default function RiskScoreScreen() {
   );
 
   const fetchRiskHistory = useCallback(async (portfolioId) => {
-    if (!portfolioId) return;
+    if (!portfolioId || !token) return;
 
     try {
-      const response = await fetch(`http://localhost:8081/api/risk-scores/portfolio/${portfolioId}`);
+      const response = await fetch(`http://localhost:8081/api/risk-scores/portfolio/${portfolioId}`, {
+        headers: getAuthHeaders()
+      });
       if (response.ok) {
         const data = await response.json();
         setHistory([{
@@ -59,17 +74,19 @@ export default function RiskScoreScreen() {
       console.error("Risk history fetch failed:", error);
       setHistory([]);
     }
-  }, []);
+  }, [token]);
 
   // 1) Load investors
   useEffect(() => {
+    if (!token) {
+      // Optional: Redirect if no token
+      return;
+    }
     const loadInvestors = async () => {
       try {
-        // IMPORTANT:
-        // Your backend controller earlier was @RequestMapping("/investors") and had:
-        // GET /getAllInvestors
-        // So the correct URL is:
-        const response = await fetch("http://localhost:8081/api/investors/getAllInvestors");
+        const response = await fetch("http://localhost:8081/api/investors/getAllInvestors", {
+          headers: getAuthHeaders()
+        });
 
         if (!response.ok) {
           const text = await response.text();
@@ -92,17 +109,19 @@ export default function RiskScoreScreen() {
     };
 
     loadInvestors();
-  }, []);
+  }, [token]);
 
   // 2) Load portfolios by selected investor
   useEffect(() => {
-    if (!selectedInvestorId) return;
+    if (!selectedInvestorId || !token) return;
 
     const loadPortfoliosByInvestor = async () => {
       setLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:8081/api/portfolios/investor/${selectedInvestorId}`
+          `http://localhost:8081/api/portfolios/investor/${selectedInvestorId}`, {
+          headers: getAuthHeaders()
+        }
         );
 
         if (!response.ok) {
@@ -156,7 +175,7 @@ export default function RiskScoreScreen() {
     };
 
     loadPortfoliosByInvestor();
-  }, [selectedInvestorId, fetchRiskHistory]);
+  }, [selectedInvestorId, fetchRiskHistory, token]);
 
   const handlePortfolioChange = (id) => {
     const key = String(id);
@@ -179,7 +198,7 @@ export default function RiskScoreScreen() {
   };
 
   const handleCalculate = async () => {
-    if (!selectedPortfolioId) return;
+    if (!selectedPortfolioId || !token) return;
 
     const score = calculateRiskValue(allocation);
     const riskDetails = getRiskLevelDetails(score);
@@ -197,7 +216,7 @@ export default function RiskScoreScreen() {
         `http://localhost:8081/api/risk-scores/calculate/${selectedPortfolioId}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify(payload),
         }
       );

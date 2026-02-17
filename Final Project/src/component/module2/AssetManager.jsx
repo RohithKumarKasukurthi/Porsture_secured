@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import '../../CSSDesgin2/AssetManager.css';
 import Navbar from '../../Navbar/Navbar';
@@ -23,85 +23,151 @@ export default function AssetManager() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchManagerData = async () => {
-      try {
+  // Handle session and user extraction
+  const loggedInUser = JSON.parse(localStorage.getItem("manager_user") || "{}");
+  const userData = loggedInUser.user || loggedInUser;
+  // Asset Manager is an Admin layout, so we look for staffId
+  const staffId = userData.staffId || userData.id;
+  const token = loggedInUser.token;
+  const userRole = userData.role;
 
-        const response = await fetch('http://localhost:8081/api/portfolios/all');
-        if (!response.ok) {
-          const text = await response.text();
-          console.error("Portfolio fetch failed:", response.status, text);
-          return;
-        }
+  const getAuthHeaders = useCallback(() => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }), [token]);
 
-        const portfolios = await response.json();
+  const fetchManagerData = useCallback(async () => {
+    if (!token) return;
 
-        const investorIds = Array.from(
-          new Set(
-            portfolios
-              .map(p => p.investorId)
-              .filter(id => id !== null && id !== undefined)
-          )
-        );
-
-        // 3) Fetch investors (parallel)
-        const investorResults = await Promise.allSettled(
-          investorIds.map(async (id) => {
-            const invRes = await fetch(`http://localhost:8081/api/investors/${id}`);
-            if (!invRes.ok) throw new Error(`Investor ${id} fetch failed (${invRes.status})`);
-            const inv = await invRes.json();
-            return { id, fullName: inv.fullName };
-          })
-        );
-
-        // 4) Build lookup map
-        const investorNameById = {};
-        for (const r of investorResults) {
-          if (r.status === "fulfilled") {
-            investorNameById[r.value.id] = r.value.fullName || "N/A";
-          }
-        }
-
-        // 5) Build table rows
-        const formattedData = portfolios.map(port => ({
-          portfolio_id: port.portfolioId,
-          investor_id: port.investorId,
-          investor_name: investorNameById[port.investorId] || "N/A",
-          equity: port.equityPercentage || 0,
-          bond: port.bondPercentage || 0,
-          derivative: port.derivativePercentage || 0,
-          quantity: port.quantity || 0,
-          price: port.price || port.investedAmount || 0,
-          status: port.status ? port.status.toString().toUpperCase() : "PENDING"
-        }));
-
-        setSettlementData(formattedData);
-        setPendingCount(formattedData.filter(p => p.status === "PENDING").length);
-      } catch (error) {
-        console.error("Database connection error:", error);
-      } finally {
-        setIsLoading(false);
+    try {
+      const response = await fetch('http://localhost:8081/api/portfolios/all', {
+        headers: getAuthHeaders()
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Portfolio fetch failed:", response.status, text);
+        // Relaxed error handling: Do not auto-logout on transient errors. 
+        // Session validity is checked on mount.
+        return;
       }
-    };
 
+      const portfolios = await response.json();
+
+      const investorIds = Array.from(
+        new Set(
+          portfolios
+            .map(p => p.investorId)
+            .filter(id => id !== null && id !== undefined)
+        )
+      );
+
+      // 3) Fetch investors (parallel)
+      const investorResults = await Promise.allSettled(
+        investorIds.map(async (id) => {
+          const invRes = await fetch(`http://localhost:8081/api/investors/${id}`, {
+            headers: getAuthHeaders()
+          });
+          if (!invRes.ok) throw new Error(`Investor ${id} fetch failed (${invRes.status})`);
+          const inv = await invRes.json();
+          return { id, fullName: inv.fullName };
+        })
+      );
+
+      // 4) Build lookup map
+      const investorNameById = {};
+      for (const r of investorResults) {
+        if (r.status === "fulfilled") {
+          investorNameById[r.value.id] = r.value.fullName || "N/A";
+        }
+      }
+
+      // 5) Build table rows
+      const formattedData = portfolios.map(port => ({
+        portfolio_id: port.portfolioId,
+        investor_id: port.investorId,
+        investor_name: investorNameById[port.investorId] || "N/A",
+        equity: port.equityPercentage || 0,
+        bond: port.bondPercentage || 0,
+        derivative: port.derivativePercentage || 0,
+        quantity: port.quantity || 0,
+        price: port.price || port.investedAmount || 0,
+        status: port.status ? port.status.toString().toUpperCase() : "PENDING"
+      }));
+
+      setSettlementData(formattedData);
+      setPendingCount(formattedData.filter(p => p.status === "PENDING").length);
+    } catch (error) {
+      console.error("Database connection error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, getAuthHeaders, navigate]);
+
+  const fetchProfileFromDB = useCallback(async () => {
+    if (!staffId || !token) return;
+
+    try {
+      const url = `http://localhost:8081/api/internal/profile/${staffId}`;
+      const response = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Profile fetch failed:", response.status, text);
+        return;
+      }
+
+      const dbUser = await response.json();
+
+      setProfile({
+        staffId: dbUser.staffId ?? "",
+        name: dbUser.fullName ?? dbUser.name ?? "",
+        email: dbUser.email ?? "",
+        role: dbUser.role ?? "",
+      });
+    } catch (error) {
+      console.error("Error fetching profile from database:", error);
+    }
+  }, [staffId, token, getAuthHeaders]);
+
+  // Session Validation and Data Fetching
+  useEffect(() => {
+    if (!token || !staffId) {
+      console.warn("No valid session found (Asset Manager), redirecting to login.");
+      navigate('/');
+      return;
+    }
+
+    // Optional: Check specific role if needed
+    if (userRole !== "ASSET_MANAGER" && userRole !== "Asset Manager") {
+      // Strict role check can be added here if desired
+    }
+
+    // Initial Fetch
     fetchManagerData();
-  }, []);
+    fetchProfileFromDB();
+
+    // Auto-refresh every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchManagerData();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+
+  }, [token, staffId, userRole, navigate, fetchManagerData, fetchProfileFromDB]);
 
   useEffect(() => {
     const fetchProfileFromDB = async () => {
       if (activeView !== "profile") return;
-
-      const userSession = JSON.parse(localStorage.getItem("user"));
-      const staffId = userSession?.staffId;
-
-      if (!staffId) {
-        console.warn("No staffId in localStorage user. Cannot fetch profile.");
-        return;
-      }
+      if (!staffId || !token) return;
 
       try {
         const url = `http://localhost:8081/api/internal/profile/${staffId}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          headers: getAuthHeaders()
+        });
 
         if (!response.ok) {
           const text = await response.text();
@@ -123,7 +189,7 @@ export default function AssetManager() {
     };
 
     fetchProfileFromDB();
-  }, [activeView]);
+  }, [activeView, staffId, token]);
 
   const filteredData = settlementData.filter((item) => {
     const search = searchTerm.toLowerCase();
@@ -184,7 +250,7 @@ export default function AssetManager() {
               onMouseDown={(e) => {
                 e.preventDefault();
                 setProfileOpen(false);
-                localStorage.removeItem("user");
+                localStorage.removeItem("manager_user");
                 navigate("/");
               }}
             >
@@ -209,7 +275,7 @@ export default function AssetManager() {
           <div className="profile-page">
             <div className="profile-card">
               <div className="profile-banner">
-                
+
 
                 <div className="profile-banner-row">
                   <div className="profile-avatar-wrap">

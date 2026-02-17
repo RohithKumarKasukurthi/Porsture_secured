@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; 
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../Navbar/Navbar';
 import logo from '../../logo/logo.png';
 import '../../CSSDesgin2/AssetManager.css';
@@ -9,77 +9,107 @@ export default function Request() {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  useEffect(() => {
-    fetchRequests();
-  }, []);
 
-  const fetchRequests = async () => {
-  try {
-    const response = await fetch('http://localhost:8081/api/portfolios/all');
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("Portfolio fetch failed:", response.status, text);
+  // Session & Auth
+  // Session Isolation: Asset Manager context
+  const loggedInUser = JSON.parse(localStorage.getItem("manager_user") || "{}");
+  const userData = loggedInUser.user || loggedInUser;
+  // Asset Manager uses staffId
+  const staffId = userData.staffId || userData.id;
+  const token = loggedInUser.token;
+
+  useEffect(() => {
+    if (!token || !staffId) {
+      console.warn("No valid session found (Requests), redirecting.");
+      navigate('/');
       return;
     }
+    fetchRequests();
+  }, [token, staffId, navigate]);
 
-    const data = await response.json();
-    const pending = data.filter(p => (p.status || "").toString() === "Pending");
-    const investorIds = Array.from(
-      new Set(
-        pending
-          .map(p => p.investorId)
-          .filter(id => id !== null && id !== undefined)
-      )
-    );
-
-    // Fetch investors in parallel
-    const investorResults = await Promise.allSettled(
-      investorIds.map(async (id) => {
-        const url = `http://localhost:8081/api/investors/${id}`;
-        const invRes = await fetch(url);
-
-        if (!invRes.ok) {
-          const text = await invRes.text();
-          console.error("Investor fetch failed:", { id, status: invRes.status, url, text });
-          throw new Error(`Investor ${id} fetch failed (${invRes.status})`);
-        }
-
-        const inv = await invRes.json();
-        return { id, fullName: inv.fullName ?? "Unknown" };
-      })
-    );
-
-    // Build map investorId -> name
-    const investorNameById = {};
-    for (const r of investorResults) {
-      if (r.status === "fulfilled") {
-        investorNameById[r.value.id] = r.value.fullName;
-      }
-    }
-
-    // Attach investor_name into each request row
-    const pendingWithNames = pending.map(p => ({
-      ...p,
-      investor_name: investorNameById[p.investorId] || "Unknown"
-    }));
-
-    setRequests(pendingWithNames);
-  } catch (error) {
-    console.error("Error fetching requests:", error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-const handleGoToAllocation = (req) => {
-  navigate('/investor-login', { 
-    state: { 
-      portfolioId: req.portfolioId,
-      portfolioName: req.portfolioName,
-      investedAmount: req.investedAmount
-    } 
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
   });
-};
+
+  const fetchRequests = async () => {
+    // Safety check just in case
+    if (!token) return;
+
+    try {
+      const response = await fetch('http://localhost:8081/api/portfolios/all', {
+        headers: getAuthHeaders()
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Portfolio fetch failed:", response.status, text);
+        if (response.status === 401 || response.status === 403) {
+          navigate('/');
+        }
+        return;
+      }
+
+      const data = await response.json();
+      const pending = data.filter(p => (p.status || "").toString() === "Pending");
+      const investorIds = Array.from(
+        new Set(
+          pending
+            .map(p => p.investorId)
+            .filter(id => id !== null && id !== undefined)
+        )
+      );
+
+      // Fetch investors in parallel
+      const investorResults = await Promise.allSettled(
+        investorIds.map(async (id) => {
+          const url = `http://localhost:8081/api/investors/${id}`;
+          const invRes = await fetch(url, {
+            headers: getAuthHeaders()
+          });
+
+          if (!invRes.ok) {
+            const text = await invRes.text();
+            console.error("Investor fetch failed:", { id, status: invRes.status, url, text });
+            throw new Error(`Investor ${id} fetch failed (${invRes.status})`);
+          }
+
+          const inv = await invRes.json();
+          return { id, fullName: inv.fullName ?? "Unknown" };
+        })
+      );
+
+      // Build map investorId -> name
+      const investorNameById = {};
+      for (const r of investorResults) {
+        if (r.status === "fulfilled") {
+          investorNameById[r.value.id] = r.value.fullName;
+        }
+      }
+
+      // Attach investor_name into each request row
+      const pendingWithNames = pending.map(p => ({
+        ...p,
+        investor_name: investorNameById[p.investorId] || "Unknown"
+      }));
+
+      setRequests(pendingWithNames);
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoToAllocation = (req) => {
+    navigate('/investor-login', {
+      state: {
+        portfolioId: req.portfolioId,
+        portfolioName: req.portfolioName,
+        investedAmount: req.investedAmount
+      }
+    });
+  };
 
   const handleReject = async (portfolioId) => {
     if (!window.confirm("Are you sure you want to reject this request?")) return;
@@ -87,6 +117,7 @@ const handleGoToAllocation = (req) => {
     try {
       const response = await fetch(`http://localhost:8081/api/portfolios/update-status/${portfolioId}?status=Rejected`, {
         method: 'PATCH',
+        headers: getAuthHeaders(),
       });
 
       if (response.ok) {
@@ -100,8 +131,8 @@ const handleGoToAllocation = (req) => {
 
   const myLoginOptions = (
     <div className="home-links">
-       <Link to="/asset-manager" className="ad">Home</Link>
-       <Link to="/received-requests" className="ad active">Received Requests</Link>
+      <Link to="/asset-manager" className="ad">Home</Link>
+      <Link to="/received-requests" className="ad active">Received Requests</Link>
     </div>
   );
 
@@ -128,7 +159,7 @@ const handleGoToAllocation = (req) => {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan="5" style={{textAlign: 'center'}}>Fetching data...</td></tr>
+                  <tr><td colSpan="5" style={{ textAlign: 'center' }}>Fetching data...</td></tr>
                 ) : requests.length > 0 ? (
                   requests.map((req, i) => (
                     <tr key={req.portfolioId || i}>
@@ -138,24 +169,24 @@ const handleGoToAllocation = (req) => {
                       <td>₹{req.investedAmount || '0'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                          <button 
-                            className="allocate-btn" 
+                          <button
+                            className="allocate-btn"
                             onClick={() => handleGoToAllocation(req)}
                             style={{
-                              background: '#37445fff', 
-                              color: 'white', border: 'none', 
+                              background: '#37445fff',
+                              color: 'white', border: 'none',
                               padding: '5px 12px', borderRadius: '4px', cursor: 'pointer'
                             }}
                           >
                             Go to Allocation
                           </button>
-                          
-                          <button 
-                            className="reject-btn" 
+
+                          <button
+                            className="reject-btn"
                             onClick={() => handleReject(req.portfolioId)}
                             style={{
-                              background: '#dc2626', 
-                              color: 'white', border: 'none', 
+                              background: '#dc2626',
+                              color: 'white', border: 'none',
                               padding: '5px 12px', borderRadius: '4px', cursor: 'pointer'
                             }}
                           >
@@ -167,7 +198,7 @@ const handleGoToAllocation = (req) => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{textAlign: 'center', padding: '30px'}}>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '30px' }}>
                       No new pending requests.
                     </td>
                   </tr>
@@ -178,9 +209,9 @@ const handleGoToAllocation = (req) => {
         </div>
       </main>
       <footer className="home-footer1">
-             <img src={logo} alt="logo" className="hero-logo-footer" />
-             <h5>© 2026 PortSure – Portfolio Risk Analysis & Investment Compliance System</h5>
-           </footer>
+        <img src={logo} alt="logo" className="hero-logo-footer" />
+        <h5>© 2026 PortSure – Portfolio Risk Analysis & Investment Compliance System</h5>
+      </footer>
     </div>
   );
 }

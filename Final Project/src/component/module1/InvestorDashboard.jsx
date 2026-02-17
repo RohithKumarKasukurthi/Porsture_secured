@@ -7,8 +7,19 @@ import Profilelogo from "../../logo/profilelogo.jpg";
 import NotificationPanel from './TradeCature';
 export default function InvestorDashboard() {
   const navigate = useNavigate();
-  const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const investorId = loggedInUser.investorId || loggedInUser.id;
+  const loggedInUser = JSON.parse(localStorage.getItem('investor_user') || '{}');
+  // Handle nested user object if present (from new Admin/Investor login structure)
+  const userData = loggedInUser.user || loggedInUser;
+  const investorId = userData.investorId || userData.id;
+  const token = loggedInUser.token;
+
+  useEffect(() => {
+    if (!token || !investorId) {
+      console.warn("No valid session found, redirecting to login.");
+      navigate('/');
+    }
+  }, [token, investorId, navigate]);
+
   const [activeView, setActiveView] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState("");
   const [portfolioName, setPortfolioName] = useState("");
@@ -20,8 +31,14 @@ export default function InvestorDashboard() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPortfolioId, setEditingPortfolioId] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  const [editUser, setEditUser] = useState({ ...loggedInUser });
+  const [editUser, setEditUser] = useState({ ...userData });
   const [passwords, setPasswords] = useState({ current: "", next: "" });
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
 
   const toggleRow = async (id) => {
     if (expandedRowId === id) {
@@ -29,7 +46,7 @@ export default function InvestorDashboard() {
     } else {
       setExpandedRowId(id);
       try {
-      
+
         const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
         const port = portfolioData.find(p => p.portfolioId === id);
         const status = String(port?.status || '').toUpperCase();
@@ -42,7 +59,9 @@ export default function InvestorDashboard() {
           return;
         }
 
-        const response = await fetch(`http://localhost:8081/api/risk-scores/portfolio/${id}`);
+        const response = await fetch(`http://localhost:8081/api/risk-scores/portfolio/${id}`, {
+          headers: getAuthHeaders()
+        });
         if (response.ok) {
           const scoreData = await response.json();
 
@@ -50,13 +69,13 @@ export default function InvestorDashboard() {
             port.portfolioId === id ? { ...port, riskScore: scoreData } : port
           ));
         } else {
-          
+
           setPortfolioData(prevData => prevData.map(p =>
             p.portfolioId === id ? { ...p, riskScore: null } : p
           ));
         }
       } catch (err) {
-        
+
         console.error("Risk Score fetch error:", err);
       }
     }
@@ -68,23 +87,28 @@ export default function InvestorDashboard() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`);
+      const response = await fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`, {
+        headers: getAuthHeaders()
+      });
       if (response.ok) {
         const data = await response.json();
         setPortfolioData(data);
       } else {
         console.error("Failed to fetch portfolios:", response.status);
+        // Relaxed error handling: Do not auto-logout on transient errors.
       }
     } catch (err) {
       console.error("Network Error (GET): Is Spring Boot running?", err);
     }
-  }, [investorId]);
+  }, [investorId, token, navigate]);
 
   const fetchAlerts = useCallback(async () => {
     if (!investorId || portfolioData.length === 0) return;
 
     try {
-      const exposureRes = await fetch(`http://localhost:8081/api/alerts/investor/${investorId}`);
+      const exposureRes = await fetch(`http://localhost:8081/api/alerts/investor/${investorId}`, {
+        headers: getAuthHeaders()
+      });
       const exposureData = exposureRes.ok ? await exposureRes.json() : [];
 
       const allLogsArrays = [];
@@ -107,7 +131,7 @@ export default function InvestorDashboard() {
     } catch (err) {
       console.error("Error fetching notification alerts:", err);
     }
-  }, [investorId, portfolioData]);
+  }, [investorId, portfolioData, token]);
   useEffect(() => {
     if (portfolioData.length > 0) {
       fetchAlerts();
@@ -115,11 +139,18 @@ export default function InvestorDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portfolioData.length]);
   useEffect(() => {
-    if (investorId) {
+    if (token && investorId) {
       fetchPortfolios();
+
+      // Auto-refresh every 30 seconds
+      const intervalId = setInterval(() => {
+        fetchPortfolios();
+      }, 30000);
+
+      return () => clearInterval(intervalId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [investorId]);
+  }, [token, investorId, fetchPortfolios]);
 
   const handleResendClick = (port) => {
     setPortfolioName(port.portfolioName);
@@ -161,10 +192,7 @@ export default function InvestorDashboard() {
 
       const response = await fetch(url, {
         method: isEditMode ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -188,13 +216,14 @@ export default function InvestorDashboard() {
     try {
       const response = await fetch(`http://localhost:8081/api/investors/update/${investorId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(editUser),
       });
 
       if (response.ok) {
         const updatedData = await response.json();
-        localStorage.setItem('user', JSON.stringify(updatedData));
+        // Preserve token while updating user data
+        localStorage.setItem('investor_user', JSON.stringify({ token, user: updatedData }));
         alert("Profile updated successfully!");
         setActiveView('profile');
         window.location.reload();
@@ -215,7 +244,7 @@ export default function InvestorDashboard() {
     try {
       const response = await fetch(`http://localhost:8081/api/investors/update-password/${investorId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           password: passwords.current,
           fullName: passwords.next
@@ -270,7 +299,7 @@ export default function InvestorDashboard() {
             <button className="logout-btn" onMouseDown={(e) => {
               e.preventDefault();
               setProfileOpen(false);
-              localStorage.removeItem('user');
+              localStorage.removeItem('investor_user');
               navigate('/');
             }}>Logout</button>
           </div>
@@ -282,7 +311,7 @@ export default function InvestorDashboard() {
   return (
     <div className="dashboard-container">
       <Navbar loginOptions={navOptions} />
-      <div className='label'>Welcome {loggedInUser.fullName || "User"}!!</div>
+      <div className='label'>Welcome {userData.fullName || "User"}!!</div>
 
       <main className="dashboard-content">
         {/* CREATE / EDIT PORTFOLIO VIEW */}
@@ -331,10 +360,10 @@ export default function InvestorDashboard() {
               <div className="profile-details">
                 <img src={Profilelogo} className="large-profile-img" alt="User" />
                 <div className="profile-info-grid">
-                  <p><strong>Investor ID:</strong> INF-{loggedInUser.investorId || loggedInUser.id || 'N/A'}</p>
-                  <p><strong>Name:</strong> {loggedInUser.fullName}</p>
-                  <p><strong>Email:</strong> {loggedInUser.email}</p>
-                  <p><strong>Phone:</strong> {loggedInUser.phoneNumber}</p>
+                  <p><strong>Investor ID:</strong> INF-{userData.investorId || userData.id || 'N/A'}</p>
+                  <p><strong>Name:</strong> {userData.fullName}</p>
+                  <p><strong>Email:</strong> {userData.email}</p>
+                  <p><strong>Phone:</strong> {userData.phoneNumber}</p>
                   <div style={{ marginTop: '20px', textAlign: 'center' }}>
                     <button className="submit-btn2" onClick={() => setActiveView('editProfile')}>
                       ✏️ Edit Profile
@@ -453,30 +482,30 @@ export default function InvestorDashboard() {
                     <h3>₹ {portfolioData.reduce((acc, curr) => acc + (curr.investedAmount || 0), 0).toLocaleString()}</h3>
                   </div>
                 </div>
-                 <div className="stat-card">
+                <div className="stat-card">
                   <div className="stat-icon gain-loss-icon">💰</div>
                   <div className="stat-content">
                     <p>Total Gain/Loss</p>
-                    <h3 style={{ 
+                    <h3 style={{
                       color: (() => {
                         let totalGainLoss = 0;
-                        
+
                         // Calculate total gain/loss by summing individual portfolio gains/losses
                         portfolioData.forEach((curr, idx) => {
                           const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
                           const isApproved = allowedStatuses.includes(String(curr.status || '').toUpperCase());
                           if (!isApproved) return;
-                          
+
                           const invested = Number(curr.investedAmount || 0);
-                          
+
                           // Use portfolioId as seed for consistent random-like behavior
                           const seed = curr.portfolioId || idx;
-                          
+
                           // True random distribution: 60% profit, 40% loss (not sequential)
                           // Use a hash-like function for better randomization
                           const hash = (seed * 2654435761) % 100; // Large prime for distribution
                           const isProfit = hash < 60; // 60% chance of profit
-                          
+
                           // Generate unique decimal return percentage for EACH portfolio
                           let returnPercentage;
                           if (isProfit) {
@@ -488,36 +517,36 @@ export default function InvestorDashboard() {
                             const variation = ((seed * 23 + seed * seed * 19) % 1100) / 100;
                             returnPercentage = -0.02 - variation / 100;
                           }
-                          
+
                           const finalValue = invested * (1 + returnPercentage);
                           const gainLoss = finalValue - invested;
-                          
+
                           // Sum all gains and losses
                           totalGainLoss += gainLoss;
                         });
-                        
+
                         return totalGainLoss >= 0 ? 'green' : 'red';
                       })()
                     }}>
                       ₹ {(() => {
                         let totalGainLoss = 0;
-                        
+
                         // Calculate total gain/loss by summing individual portfolio gains/losses
                         portfolioData.forEach((curr, idx) => {
                           const allowedStatuses = ['APPROVED', 'EXECUTED', 'COMPLETED'];
                           const isApproved = allowedStatuses.includes(String(curr.status || '').toUpperCase());
                           if (!isApproved) return;
-                          
+
                           const invested = Number(curr.investedAmount || 0);
-                          
+
                           // Use portfolioId as seed for consistent random-like behavior
                           const seed = curr.portfolioId || idx;
-                          
+
                           // True random distribution: 60% profit, 40% loss (not sequential)
                           // Use a hash-like function for better randomization
                           const hash = (seed * 2654435761) % 100; // Large prime for distribution
                           const isProfit = hash < 60; // 60% chance of profit
-                          
+
                           // Generate unique decimal return percentage for EACH portfolio
                           let returnPercentage;
                           if (isProfit) {
@@ -529,14 +558,14 @@ export default function InvestorDashboard() {
                             const variation = ((seed * 23 + seed * seed * 19) % 1100) / 100;
                             returnPercentage = -0.02 - variation / 100;
                           }
-                          
+
                           const finalValue = invested * (1 + returnPercentage);
                           const gainLoss = finalValue - invested;
-                          
+
                           // Sum all gains and losses
                           totalGainLoss += gainLoss;
                         });
-                        
+
                         return totalGainLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                       })()}
                     </h3>

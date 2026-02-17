@@ -32,27 +32,52 @@ const marketPrices = [
 function PerformanceDashboard() {
   const navigate = useNavigate();
 
-  const loggedInUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const investorId = loggedInUser.investorId || loggedInUser.id;
+  // Session Isolation: Investor context
+  const loggedInUser = JSON.parse(localStorage.getItem("investor_user") || "{}");
+  // Handle nested user object if present
+  const userData = loggedInUser.user || loggedInUser;
+  const investorId = userData.investorId || userData.id;
+  const token = loggedInUser.token;
 
   const [portfolios, setPortfolios] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!investorId) navigate("/");
-  }, [investorId, navigate]);
+    if (!investorId || !token) {
+      console.warn("No valid session found (Performance), redirecting.");
+      navigate("/");
+    }
+  }, [investorId, token, navigate]);
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
 
   useEffect(() => {
-    fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`)
-      .then(res => res.json())
+    if (!token || !investorId) return;
+
+    fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`, {
+      headers: getAuthHeaders()
+    })
+      .then(res => {
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            navigate("/");
+          }
+          throw new Error("Failed to fetch");
+        }
+        return res.json();
+      })
       .then(data => {
         setPortfolios(data || []);
         setSelectedId(data?.[0]?.portfolioId || "");
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [investorId]);
+  }, [investorId, token, navigate]);
 
   const activeData = useMemo(() => {
     return portfolios.find(
@@ -102,12 +127,12 @@ function PerformanceDashboard() {
 
     // Use portfolioId as seed for consistent random-like behavior
     const seed = activeData.portfolioId || index;
-    
+
     // True random distribution: 60% profit, 40% loss (not sequential)
     // Use a hash-like function for better randomization
     const hash = (seed * 2654435761) % 100; // Large prime for distribution
     const isProfit = hash < 60; // 60% chance of profit
-    
+
     // Generate unique decimal return percentage for EACH portfolio
     let baseGrowth;
     if (isProfit) {
@@ -126,7 +151,7 @@ function PerformanceDashboard() {
     // Create monthly data with realistic trading volatility
     const mData = marketPrices.map((p, i) => {
       const progress = (i + 1) / marketPrices.length;
-      
+
       // For last month, use exact final value for consistency
       if (i === marketPrices.length - 1) {
         return {
@@ -134,18 +159,18 @@ function PerformanceDashboard() {
           value: Number(finalVal.toFixed(2))
         };
       }
-      
+
       // Create realistic trading fluctuations with multiple sine waves
       const volatilityFactor = 0.08; // 8% volatility range
       const wave1 = Math.sin((i + 1) * 0.5 + seed) * volatilityFactor * 0.5;
       const wave2 = Math.sin((i + 1) * 1.2 + seed * 2) * volatilityFactor * 0.3;
       const wave3 = Math.sin((i + 1) * 2.5 + seed * 3) * volatilityFactor * 0.2;
       const combinedNoise = wave1 + wave2 + wave3;
-      
+
       // Add progressive growth with realistic fluctuations
       const progressiveValue = invested * (1 + (baseGrowth * progress));
       const fluctuation = progressiveValue * combinedNoise;
-      
+
       return {
         name: p.month,
         value: Number((progressiveValue + fluctuation).toFixed(2))
@@ -263,7 +288,7 @@ function PerformanceDashboard() {
   );
 
   const gainLoss = isApproved ? finalValue - (activeData?.investedAmount || 0) : 0;
-  const profitStatus = isApproved 
+  const profitStatus = isApproved
     ? (gainLoss > 0 ? "PROFIT" : gainLoss < 0 ? "LOSS" : "NO CHANGE")
     : "PENDING";
 
@@ -357,10 +382,10 @@ function PerformanceDashboard() {
                   domain={[yMin, yMax]}
                   label={{ value: 'Value (₹)', angle: -90, position: 'left', dx: -45, style: { fontSize: 14, fontWeight: 600, fill: "#374151" } }}
                 />
-                <Tooltip 
+                <Tooltip
                   formatter={value => [`₹${Number(value).toLocaleString()}`, 'Portfolio Value']}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                     padding: '12px',
@@ -368,13 +393,13 @@ function PerformanceDashboard() {
                   }}
                   labelStyle={{ fontWeight: 600, color: '#374151' }}
                 />
-                <ReferenceLine 
-                  y={invested} 
-                  stroke="#9ca3af" 
-                  strokeDasharray="5 5" 
+                <ReferenceLine
+                  y={invested}
+                  stroke="#9ca3af"
+                  strokeDasharray="5 5"
                   strokeWidth={2}
-                  label={{ 
-                    value: `Initial Investment: ₹${Number(invested).toLocaleString()}`, 
+                  label={{
+                    value: `Initial Investment: ₹${Number(invested).toLocaleString()}`,
                     position: 'insideTopRight',
                     fill: '#6b7280',
                     fontSize: 12,

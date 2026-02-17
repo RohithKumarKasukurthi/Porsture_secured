@@ -46,7 +46,13 @@ const LoginPage1 = () => {
 
         console.log("Login Successful:", userData);
 
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Session Isolation: Use specific keys based on role
+        let storageKey = 'user'; // Fallback
+        if (role === 'Investor') storageKey = 'investor_user';
+        else if (role === 'Asset Manager') storageKey = 'manager_user';
+        else if (role === 'Compliance Officer') storageKey = 'compliance_user';
+
+        localStorage.setItem(storageKey, JSON.stringify(userData));
 
         navigate(routes[role], {
           state: {

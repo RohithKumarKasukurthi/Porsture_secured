@@ -60,15 +60,26 @@ export default function ExposureAlertScreen() {
     Derivative: 20,
   });
 
+  // Session & Auth
+  // Session Isolation: Compliance context
+  const loggedInUser = JSON.parse(localStorage.getItem("compliance_user") || "{}");
+  const token = loggedInUser.token;
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
+
   // 1) Load investors
   useEffect(() => {
+    if (!token) return;
+
     const loadInvestors = async () => {
       try {
-        // Use ONE correct URL depending on your InvestorController.
-        // If your controller is @RequestMapping("/api/investors") then keep this:
-        const res = await fetch("http://localhost:8081/api/investors/getAllInvestors");
-        // If instead it is @RequestMapping("/investors"), change to:
-        // const res = await fetch("http://localhost:8302/investors/getAllInvestors");
+        const res = await fetch("http://localhost:8081/api/investors/getAllInvestors", {
+          headers: getAuthHeaders()
+        });
 
         if (!res.ok) {
           const text = await res.text();
@@ -95,18 +106,20 @@ export default function ExposureAlertScreen() {
     };
 
     loadInvestors();
-  }, []);
+  }, [token]);
 
   // 2) Load portfolios for selected investor
   useEffect(() => {
-    if (!selectedInvestorId) return;
+    if (!selectedInvestorId || !token) return;
 
     const loadPortfolios = async () => {
       setLoading(true);
       try {
         const investorId = Number(selectedInvestorId);
 
-        const res = await fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`);
+        const res = await fetch(`http://localhost:8081/api/portfolios/investor/${investorId}`, {
+          headers: getAuthHeaders()
+        });
         if (!res.ok) {
           const text = await res.text();
           console.error("Portfolios fetch failed:", res.status, text);
@@ -143,19 +156,21 @@ export default function ExposureAlertScreen() {
     };
 
     loadPortfolios();
-  }, [selectedInvestorId]);
+  }, [selectedInvestorId, token]);
 
   // 3) Load alert history for selected portfolio
   useEffect(() => {
     const fetchHistory = async () => {
       const dbId = portfolios[selectedPortfolio]?.dbId;
-      if (!dbId) {
+      if (!dbId || !token) {
         setAlertHistory([]);
         return;
       }
 
       try {
-        const res = await fetch(`http://localhost:8081/api/alerts/portfolio/${dbId}`);
+        const res = await fetch(`http://localhost:8081/api/alerts/portfolio/${dbId}`, {
+          headers: getAuthHeaders()
+        });
 
         if (!res.ok) {
           const text = await res.text();
@@ -173,7 +188,7 @@ export default function ExposureAlertScreen() {
     };
 
     fetchHistory();
-  }, [selectedPortfolio, portfolios, alertSent]);
+  }, [selectedPortfolio, portfolios, alertSent, token]);
 
   // reset warning display when switching portfolio
   useEffect(() => {
@@ -186,7 +201,7 @@ export default function ExposureAlertScreen() {
 
   async function handleSendAlert() {
     const dbId = portfolios[selectedPortfolio]?.dbId;
-    if (!dbId || activeBreaches.length === 0) return;
+    if (!dbId || activeBreaches.length === 0 || !token) return;
 
     const breachNames = activeBreaches.map((b) => b.name).join(", ");
     const firstBreach = activeBreaches[0];
@@ -204,7 +219,7 @@ export default function ExposureAlertScreen() {
     const compliancePayload = {
       portfolioId: dbId,
       // If your compliance table/entity has investorId, keep this; otherwise remove it.
-      // investorId: Number(selectedInvestorId),
+      investorId: Number(selectedInvestorId),
       regulationType: "Exposure Limit Policy",
       findings: `Automatic Breach Log: ${breachNames} recorded at ${firstBreach.value.toFixed(
         2
@@ -217,7 +232,7 @@ export default function ExposureAlertScreen() {
       // 1) Save exposure alert
       const alertRes = await fetch(`http://localhost:8081/api/alerts/send/${dbId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(alertPayload),
       });
 
@@ -231,7 +246,7 @@ export default function ExposureAlertScreen() {
       // 2) Save compliance log
       const complianceRes = await fetch(`http://localhost:8081/api/compliance/logs/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(compliancePayload),
       });
 
@@ -255,10 +270,12 @@ export default function ExposureAlertScreen() {
 
   const handleDeleteAlert = async (alertId) => {
     if (!window.confirm("Delete this alert record?")) return;
+    if (!token) return;
 
     try {
       const res = await fetch(`http://localhost:8081/api/alerts/delete/${alertId}`, {
         method: "DELETE",
+        headers: getAuthHeaders()
       });
 
       if (!res.ok) {

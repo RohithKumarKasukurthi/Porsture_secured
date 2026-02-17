@@ -5,7 +5,7 @@ import "../../CSSDesgin4/ComplianceDashboard.css";
 import Navbar from "../../Navbar/Navbar.jsx";
 import logo from "../../logo/logo.png";
 import profileLogo from "../../logo/profilelogo.jpg";
- 
+
 function SummaryCard({ title, value, variant = "default", icon: Icon }) {
   return (
     <div className={`card summary-card ${variant}`}>
@@ -17,39 +17,58 @@ function SummaryCard({ title, value, variant = "default", icon: Icon }) {
     </div>
   );
 }
- 
+
 export default function ComplianceDashboard() {
   const navigate = useNavigate();
- 
+
   const [activeView, setActiveView] = useState("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
- 
-  const loggedInUser = JSON.parse(localStorage.getItem("user") || "{}");
- 
-  const staffId = loggedInUser.staffId || loggedInUser.id;
- 
+
+  const loggedInUser = JSON.parse(localStorage.getItem("compliance_user") || "{}");
+  // Handle nested user object if present (from new Admin/Investor login structure)
+  const userData = loggedInUser.user || loggedInUser;
+  const staffId = userData.staffId || userData.id;
+  const token = loggedInUser.token;
+
+  useEffect(() => {
+    if (!token || !staffId) {
+      console.warn("No valid session found (Compliance), redirecting to login.");
+      navigate('/');
+    }
+  }, [token, staffId, navigate]);
+
   const [profile, setProfile] = useState({
     staffId: "",
     name: "",
     email: "",
     role: "",
   });
- 
+
   const [complianceLogs, setComplianceLogs] = useState([]);
   const [metrics, setMetrics] = useState({ total: 0, nonCompliant: 0, compliant: 0 });
   const [auditing, setAuditing] = useState(false);
- 
+
+  const getAuthHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${token}`
+  });
+
   const fetchData = async () => {
     try {
-      const logsRes = await fetch("http://localhost:8081/api/compliance/logs");
+      const logsRes = await fetch("http://localhost:8081/api/compliance/logs", {
+        headers: getAuthHeaders()
+      });
       const logsData = await logsRes.json();
- 
-      const portfolioRes = await fetch("http://localhost:8081/api/portfolios/all");
+
+      const portfolioRes = await fetch("http://localhost:8081/api/portfolios/all", {
+        headers: getAuthHeaders()
+      });
       const portfolioData = await portfolioRes.json();
- 
+
       const totalCount = Array.isArray(portfolioData) ? portfolioData.length : 0;
       const logs = Array.isArray(logsData) ? logsData : [];
- 
+
       const compliantLogs = logs.filter((l) =>
         l.complianceStatus?.toUpperCase() === "COMPLIANCE" ||
         l.complianceStatus?.toUpperCase() === "COMPLIANT"
@@ -57,7 +76,7 @@ export default function ComplianceDashboard() {
       const nonCompliantLogs = logs.filter((l) =>
         ["BREACH", "NON-COMPLIANT", "NON_COMPLIANT", "NON-COMPLIANCE", "CRITICAL_BREACH"].includes(l.complianceStatus?.toUpperCase())
       );
- 
+
       setMetrics({
         total: totalCount,
         compliant: compliantLogs.length,
@@ -68,18 +87,29 @@ export default function ComplianceDashboard() {
       console.error("Dashboard sync failed:", err);
     }
   };
- 
+
   useEffect(() => {
-    fetchData();
-  }, []);
- 
+    if (token) {
+      fetchData();
+
+      // Auto-refresh every 30 seconds
+      const intervalId = setInterval(() => {
+        fetchData();
+      }, 30000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [token]);
+
   useEffect(() => {
     const fetchProfile = async () => {
       if (activeView !== "profile") return;
       if (!staffId) return;
- 
+
       try {
-        const res = await fetch(`http://localhost:8081/api/internal/profile/${staffId}`);
+        const res = await fetch(`http://localhost:8081/api/internal/profile/${staffId}`, {
+          headers: getAuthHeaders()
+        });
         if (!res.ok) {
           const t = await res.text();
           console.error("Profile fetch failed:", res.status, t);
@@ -96,25 +126,28 @@ export default function ComplianceDashboard() {
         console.error("Profile fetch error:", e);
       }
     };
- 
+
     fetchProfile();
-  }, [activeView, staffId]);
- 
+  }, [activeView, staffId, token]);
+
   // Filter to show only NON-COMPLIANT reports
   const alerts = complianceLogs.filter((log) =>
     ["BREACH", "NON-COMPLIANT", "NON_COMPLIANT", "NON-COMPLIANCE", "CRITICAL_BREACH"].includes(log.complianceStatus?.toUpperCase())
   );
- 
+
   const handleAuditAll = async () => {
     if (!window.confirm("This will audit all portfolios.")) return;
     setAuditing(true);
-   
+
     // Clear all logs immediately
     setComplianceLogs([]);
     setMetrics({ total: 0, nonCompliant: 0, compliant: 0 });
-   
+
     try {
-      const res = await fetch("http://localhost:8081/api/compliance/audit-all", { method: "POST" });
+      const res = await fetch("http://localhost:8081/api/compliance/audit-all", {
+        method: "POST",
+        headers: getAuthHeaders()
+      });
       if (res.ok) {
         alert("Audit completed successfully!");
         await fetchData();
@@ -130,7 +163,7 @@ export default function ComplianceDashboard() {
       setAuditing(false);
     }
   };
- 
+
   const navOptions = (
     <div className="home-links">
       <button
@@ -140,11 +173,11 @@ export default function ComplianceDashboard() {
       >
         Home
       </button>
- 
+
       <Link to="/C2" className="ad">Compliance Logs</Link>
       <Link to="/r" className="ad">Risk Score</Link>
       <Link to="/r1" className="ad">Exposure Alert</Link>
- 
+
       {/* Profile dropdown */}
       <div
         className="cd-profile-container"
@@ -157,7 +190,7 @@ export default function ComplianceDashboard() {
         >
           <img src={profileLogo} alt="Profile" />
         </div>
- 
+
         {profileOpen && (
           <div className="cd-profile-dropdown">
             <button
@@ -170,16 +203,16 @@ export default function ComplianceDashboard() {
             >
               My Profile
             </button>
- 
+
             <hr />
- 
+
             <button
               type="button"
               className="logout-btn"
               onMouseDown={(e) => {
                 e.preventDefault();
                 setProfileOpen(false);
-                localStorage.removeItem("user");
+                localStorage.removeItem("compliance_user");
                 navigate("/");
               }}
             >
@@ -190,43 +223,43 @@ export default function ComplianceDashboard() {
       </div>
     </div>
   );
- 
+
   return (
     <div className="dashboard-layout-1">
       <Navbar loginOptions={navOptions} />
- 
+
       {activeView === "profile" ? (
         <main className="cd-profile-page">
           <div className="cd-profile-card">
             <div className="cd-profile-banner">
-              
- 
+
+
               <div className="cd-profile-banner-row">
                 <div className="cd-profile-avatar-wrap">
                   <img className="cd-profile-avatar-img" src={profileLogo} alt="User" />
                 </div>
                 <div className="cd-profile-banner-meta">
-                  
+
                   <h2 className="cd-profile-name">{profile.name || "Compliance Officer"}</h2>
                   <div className="cd-profile-role">{profile.role?.replace("_", " ") || "—"}</div>
                 </div>
               </div>
             </div>
- 
+
             <div className="cd-profile-body">
               <div className="cd-profile-section-title">Account Details</div>
- 
+
               <div className="cd-profile-grid">
                 <div className="cd-profile-field">
                   <span className="cd-profile-label">Staff ID</span>
                   <div className="cd-profile-value">STF-{profile.staffId || "—"}</div>
                 </div>
- 
+
                 <div className="cd-profile-field">
                   <span className="cd-profile-label">Email</span>
                   <div className="cd-profile-value">{profile.email || "—"}</div>
                 </div>
- 
+
               </div>
             </div>
           </div>
@@ -234,7 +267,7 @@ export default function ComplianceDashboard() {
       ) : (
         <>
           <h1 className="section-title-1">COMPLIANCE DASHBOARD</h1>
- 
+
           <div className="kpi-grid-1 dual-grid">
             <SummaryCard
               title="Total Portfolios"
@@ -255,7 +288,7 @@ export default function ComplianceDashboard() {
               variant="danger"
             />
           </div>
- 
+
           <div className="card-3">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-lg)" }}>
               <h2 className="recent-alerts-header">NON-COMPLIANT LOGS</h2>
@@ -275,7 +308,7 @@ export default function ComplianceDashboard() {
                   opacity: auditing ? 0.6 : 1,
                   transition: "var(--transition-base)",
                   boxShadow: "var(--shadow-sm)",
-                  marginRight:"50px"
+                  marginRight: "50px"
                 }}
                 onMouseEnter={(e) => !auditing && (e.target.style.transform = "translateY(-2px)")}
                 onMouseLeave={(e) => (e.target.style.transform = "translateY(0)")}
@@ -314,7 +347,7 @@ export default function ComplianceDashboard() {
           </div>
         </>
       )}
- 
+
       <footer className="home-footer1">
         <img src={logo} alt="PortSure footer logo" className="hero-logo-footer" />
         <h5>© 2025 PortSure – Portfolio Risk Analysis & Investment Compliance System</h5>
