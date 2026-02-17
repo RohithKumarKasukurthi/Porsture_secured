@@ -46,13 +46,9 @@ public class InvestorController {
         Optional<Investor> userOpt = service.login(loginData.getEmail(), loginData.getPassword());
 
         if (userOpt.isPresent()) {
-            Investor user = userOpt.get(); // Password is not null here, but we should not return it.
-            // However, service.login returns user *after* matching password.
-            // Wait, service.login returns the entity from DB.
-            // We should mask password before returning in 'user' key, or use DTO.
-            // Existing code did user.setPassword(null).
+            Investor user = userOpt.get();
             user.setPassword(null);
-            String token = jwtUtil.generateToken(user.getEmail());
+            String token = jwtUtil.generateToken(user.getEmail(), "INVESTOR");
             return ResponseEntity.ok(Map.of("token", token, "user", user));
         } else {
             return ResponseEntity.status(401).body("Invalid credentials");
